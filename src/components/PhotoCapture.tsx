@@ -13,6 +13,7 @@ export default function PhotoCapture({ onCapture, existingPhotoUrl }: PhotoCaptu
         type="file"
         accept="image/*"
         capture="environment"
+        className="tap-target"
         onChange={(e) => {
           const file = e.target.files?.[0]
           if (file) onCapture(file)
