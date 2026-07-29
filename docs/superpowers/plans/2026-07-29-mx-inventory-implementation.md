@@ -2936,7 +2936,7 @@ export default function ThirdPassPickerPage({ mismatches, onPairChosen }: ThirdP
 ```tsx
 import { useEffect, useState } from 'react'
 import {
-  getPassLines, closeInventory, setCountLine, getOrOpenZoneCount, reopenTarget, closeZoneCount,
+  getPassLines, closeInventory, setCountLine, getOrOpenZoneCount, reopenTarget, closeZoneCount, closePass,
 } from '../../db/repositories/inventoryRepository'
 import { resolveThirdPass, type ThirdPassResolution } from '../../domain/reconciliation'
 import type { CountLineSnapshot } from '../../domain/reconciliation'
@@ -2987,6 +2987,7 @@ export default function ManualResolutionPage({
             await setCountLine(zoneCount.id, item.materialId, Number(entry.quantity), userId)
             await closeZoneCount(zoneCount.id, userId)
           }
+          await closePass(pass3Id, userId)
           await closeInventory(inventoryId, 'successful')
           onResolved()
         }}
