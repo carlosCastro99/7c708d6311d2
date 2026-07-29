@@ -1591,7 +1591,41 @@ export function parseExpectedQuantitiesCsv(
 Run: `npx vitest run src/domain/csv.test.ts`
 Expected: PASS
 
-- [ ] **Step 5: Create `src/pages/masterData/ImportPage.tsx`**
+- [ ] **Step 5: Write the failing test — `src/pages/masterData/ImportPage.test.tsx`**
+
+```tsx
+import { describe, it, expect, afterEach } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { db } from '../../db/schema'
+import { listZones } from '../../db/repositories/zoneRepository'
+import ImportPage from './ImportPage'
+
+afterEach(async () => {
+  await Promise.all(db.tables.map((t) => t.clear()))
+})
+
+describe('ImportPage', () => {
+  it('imports zones from an uploaded CSV file', async () => {
+    render(<ImportPage />)
+
+    const csv = 'name,sapStorageLocation\nWarehouse A,SL01'
+    const file = new File([csv], 'zones.csv', { type: 'text/csv' })
+    const input = screen.getByLabelText(/zones csv/i) as HTMLInputElement
+    fireEvent.change(input, { target: { files: [file] } })
+
+    expect(await screen.findByText(/imported 1 zone/i)).toBeInTheDocument()
+    const zones = await listZones()
+    expect(zones.map((z) => z.name)).toEqual(['Warehouse A'])
+  })
+})
+```
+
+- [ ] **Step 6: Run test to verify it fails**
+
+Run: `npx vitest run src/pages/masterData/ImportPage.test.tsx`
+Expected: FAIL — module not found.
+
+- [ ] **Step 7: Create `src/pages/masterData/ImportPage.tsx`**
 
 ```tsx
 import { useState } from 'react'
@@ -1671,10 +1705,15 @@ export default function ImportPage() {
 }
 ```
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 8: Run test to verify it passes**
+
+Run: `npx vitest run src/pages/masterData/ImportPage.test.tsx`
+Expected: PASS
+
+- [ ] **Step 9: Commit**
 
 ```bash
-git add src/domain/csv.ts src/domain/csv.test.ts src/pages/masterData/ImportPage.tsx
+git add src/domain/csv.ts src/domain/csv.test.ts src/pages/masterData/ImportPage.tsx src/pages/masterData/ImportPage.test.tsx
 git commit -m "feat: add CSV import for zones and materials"
 ```
 
@@ -1691,7 +1730,7 @@ git commit -m "feat: add CSV import for zones and materials"
 - Produces:
   - `startInventory(name: string, userId: string): Promise<{ inventory: Inventory; pass: InventoryPass }>`
   - `getOrOpenZoneCount(passId: string, zoneId: string, userId: string): Promise<ZoneCount>`
-  - `setCountLine(zoneCountId: string, materialId: string, quantity: number, userId: string, expectedQuantity?: number): Promise<MaterialCountLine>`
+  - `setCountLine(zoneCountId: string, materialId: string, quantity: number, userId: string, expectedQuantity?: number, photoBlobId?: string): Promise<MaterialCountLine>`
   - `closeZoneCount(zoneCountId: string, userId: string): Promise<void>`
   - `closePass(passId: string, userId: string): Promise<void>`
   - `startNextPass(inventoryId: string, passNumber: 2 | 3): Promise<InventoryPass>`
@@ -1814,6 +1853,7 @@ export async function setCountLine(
   quantity: number,
   userId: string,
   expectedQuantity?: number,
+  photoBlobId?: string,
 ): Promise<MaterialCountLine> {
   const zoneCount = await db.zoneCounts.get(zoneCountId)
   if (!zoneCount) throw new Error('Zone count not found')
@@ -1831,7 +1871,13 @@ export async function setCountLine(
       oldValue: existing.quantity,
       newValue: quantity,
     })
-    const updated: MaterialCountLine = { ...existing, quantity, updatedByUserId: userId, updatedAt: now }
+    const updated: MaterialCountLine = {
+      ...existing,
+      quantity,
+      updatedByUserId: userId,
+      updatedAt: now,
+      photoBlobId: photoBlobId ?? existing.photoBlobId,
+    }
     await db.countLines.put(updated)
     return updated
   }
@@ -1842,6 +1888,7 @@ export async function setCountLine(
     materialId,
     quantity,
     expectedQuantity,
+    photoBlobId,
     updatedByUserId: userId,
     updatedAt: now,
   }
@@ -2372,16 +2419,7 @@ export default function CountingScreen({
         type="button"
         onClick={async () => {
           const photoBlobId = photoBlob ? await savePhoto(photoBlob) : undefined
-          await setCountLine(zoneCountId, materialId, quantity, userId, expectedQuantity)
-          if (photoBlobId) {
-            const line = await import('../../db/schema').then(({ db }) =>
-              db.countLines.where({ zoneCountId, materialId }).first(),
-            )
-            if (line) {
-              const { db } = await import('../../db/schema')
-              await db.countLines.put({ ...line, photoBlobId })
-            }
-          }
+          await setCountLine(zoneCountId, materialId, quantity, userId, expectedQuantity, photoBlobId)
           onSaved()
         }}
       >
@@ -2795,7 +2833,7 @@ git commit -m "feat: add automatic pass-2 reconciliation and variance report pag
 - Test: `src/pages/inventory/ManualResolutionPage.test.tsx`
 
 **Interfaces:**
-- Consumes: `getPassLines`, `closeInventory`, `setCountLine` from `inventoryRepository.ts`; `resolveThirdPass` from `reconciliation.ts`.
+- Consumes: `getPassLines`, `closeInventory`, `setCountLine`, `getOrOpenZoneCount`, `reopenTarget`, `closeZoneCount` from `inventoryRepository.ts`; `resolveThirdPass` from `reconciliation.ts`.
 - Produces:
   - `<ThirdPassPickerPage mismatches={Array<{ zoneId: string; materialId: string }>} onPairChosen={(zoneId: string, materialId: string) => void} />` — restricts counting to only the mismatched pairs from Task 15.
   - `<ManualResolutionPage inventoryId={string} pass1Id={string} pass2Id={string} pass3Id={string} userId={string} onResolved={() => void} />` — computes `resolveThirdPass`, auto-applies matches, and presents a form for any `needs_manual_resolution` lines requiring a supervisor-entered quantity + reason.
@@ -2897,7 +2935,9 @@ export default function ThirdPassPickerPage({ mismatches, onPairChosen }: ThirdP
 
 ```tsx
 import { useEffect, useState } from 'react'
-import { getPassLines, closeInventory, setCountLine, getOrOpenZoneCount } from '../../db/repositories/inventoryRepository'
+import {
+  getPassLines, closeInventory, setCountLine, getOrOpenZoneCount, reopenTarget, closeZoneCount,
+} from '../../db/repositories/inventoryRepository'
 import { resolveThirdPass, type ThirdPassResolution } from '../../domain/reconciliation'
 import type { CountLineSnapshot } from '../../domain/reconciliation'
 
@@ -2941,7 +2981,11 @@ export default function ManualResolutionPage({
             const entry = entries[key]
             if (!entry || entry.quantity === '' || !entry.reason.trim()) return
             const zoneCount = await getOrOpenZoneCount(pass3Id, item.zoneId, userId)
+            if (zoneCount.status === 'closed') {
+              await reopenTarget('zoneCount', zoneCount.id, userId, entry.reason)
+            }
             await setCountLine(zoneCount.id, item.materialId, Number(entry.quantity), userId)
+            await closeZoneCount(zoneCount.id, userId)
           }
           await closeInventory(inventoryId, 'successful')
           onResolved()
@@ -3182,7 +3226,8 @@ export default function ExportPage({ inventoryId }: ExportPageProps) {
     (async () => {
       const inventory = await db.inventories.get(inventoryId)
       if (!inventory) return
-      const passes = await db.passes.where('inventoryId').equals(inventoryId).toArray()
+      const passes = (await db.passes.where('inventoryId').equals(inventoryId).toArray())
+        .sort((a, b) => a.passNumber - b.passNumber)
 
       const detailRows: DetailRow[] = []
       const officialByZoneMaterial = new Map<string, SummaryRow>()
@@ -3244,6 +3289,8 @@ export default function ExportPage({ inventoryId }: ExportPageProps) {
   )
 }
 ```
+
+Note: `passes` is sorted ascending by `passNumber` before the loop populates `officialByZoneMaterial`, so a later pass's line always overwrites an earlier pass's line for the same Zone+Material key. This is what makes the summary CSV reflect the final official quantity — a Zone+Material pair that needed a 3rd pass ends up keyed by pass 3's (resolved) line, not pass 1's or pass 2's mismatched one, without the export needing to know which pairs were mismatched.
 
 - [ ] **Step 8: Run test to verify it passes**
 
