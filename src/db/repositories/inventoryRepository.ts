@@ -28,6 +28,10 @@ export async function getOrOpenZoneCount(passId: string, zoneId: string, userId:
   const existing = await db.zoneCounts.where({ passId, zoneId }).first()
   if (existing) return existing
 
+  const pass = await db.passes.get(passId)
+  if (!pass) throw new Error('Pass not found')
+  if (pass.status === 'closed') throw new Error('Cannot open a zone count under a closed pass')
+
   const zoneCount: ZoneCount = {
     id: newId(),
     passId,
@@ -48,53 +52,56 @@ export async function setCountLine(
   expectedQuantity?: number,
   photoBlobId?: string,
 ): Promise<MaterialCountLine> {
-  const zoneCount = await db.zoneCounts.get(zoneCountId)
-  if (!zoneCount) throw new Error('Zone count not found')
-  if (zoneCount.status === 'closed') throw new Error('Cannot edit a closed zone count')
+  return db.transaction('rw', db.zoneCounts, db.countLines, db.auditEntries, async () => {
+    const zoneCount = await db.zoneCounts.get(zoneCountId)
+    if (!zoneCount) throw new Error('Zone count not found')
+    if (zoneCount.status === 'closed') throw new Error('Cannot edit a closed zone count')
 
-  const existing = await db.countLines.where({ zoneCountId, materialId }).first()
-  const now = Date.now()
+    const existing = await db.countLines.where({ zoneCountId, materialId }).first()
+    const now = Date.now()
 
-  if (existing) {
-    await db.auditEntries.add({
+    if (existing) {
+      await db.auditEntries.add({
+        id: newId(),
+        materialCountLineId: existing.id,
+        userId,
+        timestamp: now,
+        oldValue: existing.quantity,
+        newValue: quantity,
+      })
+      const updated: MaterialCountLine = {
+        ...existing,
+        quantity,
+        updatedByUserId: userId,
+        updatedAt: now,
+        photoBlobId: photoBlobId ?? existing.photoBlobId,
+        expectedQuantity: expectedQuantity ?? existing.expectedQuantity,
+      }
+      await db.countLines.put(updated)
+      return updated
+    }
+
+    const line: MaterialCountLine = {
       id: newId(),
-      materialCountLineId: existing.id,
-      userId,
-      timestamp: now,
-      oldValue: existing.quantity,
-      newValue: quantity,
-    })
-    const updated: MaterialCountLine = {
-      ...existing,
+      zoneCountId,
+      materialId,
       quantity,
+      expectedQuantity,
+      photoBlobId,
       updatedByUserId: userId,
       updatedAt: now,
-      photoBlobId: photoBlobId ?? existing.photoBlobId,
     }
-    await db.countLines.put(updated)
-    return updated
-  }
-
-  const line: MaterialCountLine = {
-    id: newId(),
-    zoneCountId,
-    materialId,
-    quantity,
-    expectedQuantity,
-    photoBlobId,
-    updatedByUserId: userId,
-    updatedAt: now,
-  }
-  await db.countLines.add(line)
-  await db.auditEntries.add({
-    id: newId(),
-    materialCountLineId: line.id,
-    userId,
-    timestamp: now,
-    oldValue: 0,
-    newValue: quantity,
+    await db.countLines.add(line)
+    await db.auditEntries.add({
+      id: newId(),
+      materialCountLineId: line.id,
+      userId,
+      timestamp: now,
+      oldValue: 0,
+      newValue: quantity,
+    })
+    return line
   })
-  return line
 }
 
 export async function closeZoneCount(zoneCountId: string, userId: string): Promise<void> {
@@ -127,6 +134,12 @@ export async function closeInventory(
 ): Promise<void> {
   const inventory = await db.inventories.get(inventoryId)
   if (!inventory) throw new Error('Inventory not found')
+
+  const passes = await db.passes.where('inventoryId').equals(inventoryId).toArray()
+  if (passes.some((p) => p.status !== 'closed')) {
+    throw new Error('Cannot close inventory: open passes remain')
+  }
+
   await db.inventories.put({ ...inventory, status, closedAt: Date.now() })
 }
 

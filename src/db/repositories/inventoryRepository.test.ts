@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { db } from '../schema'
 import {
   startInventory, getOrOpenZoneCount, setCountLine, closeZoneCount,
-  closePass, reopenTarget, getPassLines,
+  closePass, closeInventory, reopenTarget, getPassLines,
 } from './inventoryRepository'
 
 afterEach(async () => {
@@ -50,5 +50,39 @@ describe('inventoryRepository', () => {
     const { pass } = await startInventory('Q3 Paper Warehouse', 'user-1')
     await getOrOpenZoneCount(pass.id, 'zone-1', 'user-1')
     await expect(closePass(pass.id, 'user-1')).rejects.toThrow(/open zone/i)
+  })
+
+  it('refuses to open a zone count under a closed pass', async () => {
+    const { pass } = await startInventory('Q3 Paper Warehouse', 'user-1')
+    await closePass(pass.id, 'user-1')
+    await expect(getOrOpenZoneCount(pass.id, 'zone-x', 'user-1')).rejects.toThrow()
+  })
+
+  it('refuses to close an inventory with an open pass', async () => {
+    const { inventory } = await startInventory('Q3 Paper Warehouse', 'user-1')
+    await expect(closeInventory(inventory.id, 'closed_single_pass')).rejects.toThrow()
+  })
+
+  it('preserves expectedQuantity correctly across an update', async () => {
+    const { pass } = await startInventory('Q3 Paper Warehouse', 'user-1')
+    const zoneCount = await getOrOpenZoneCount(pass.id, 'zone-1', 'user-1')
+
+    await setCountLine(zoneCount.id, 'material-1', 5, 'user-1', 100)
+    const updated = await setCountLine(zoneCount.id, 'material-1', 6, 'user-1', 120)
+
+    expect(updated.expectedQuantity).toBe(120)
+  })
+
+  it('does not create duplicate count lines under concurrent writes', async () => {
+    const { pass } = await startInventory('Q3 Paper Warehouse', 'user-1')
+    const zoneCount = await getOrOpenZoneCount(pass.id, 'zone-1', 'user-1')
+
+    await Promise.all([
+      setCountLine(zoneCount.id, 'material-1', 5, 'user-1'),
+      setCountLine(zoneCount.id, 'material-1', 7, 'user-1'),
+    ])
+
+    const lines = await db.countLines.where({ zoneCountId: zoneCount.id, materialId: 'material-1' }).toArray()
+    expect(lines).toHaveLength(1)
   })
 })
