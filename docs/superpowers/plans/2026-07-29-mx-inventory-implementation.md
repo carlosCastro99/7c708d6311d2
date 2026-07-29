@@ -2349,7 +2349,7 @@ git commit -m "feat: add start inventory and zone picker pages"
 
 ```tsx
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { db } from '../../db/schema'
 import CountingScreen from './CountingScreen'
@@ -2379,12 +2379,14 @@ describe('CountingScreen', () => {
     await user.click(screen.getByRole('button', { name: '+1' }))
     await user.click(screen.getByRole('button', { name: /save/i }))
 
-    expect(onSaved).toHaveBeenCalled()
+    await waitFor(() => expect(onSaved).toHaveBeenCalled())
     const line = await db.countLines.where({ zoneCountId: 'zc-1', materialId: 'material-1' }).first()
     expect(line?.quantity).toBe(2)
   })
 })
 ```
+
+Note: the "Save count" button's handler awaits `savePhoto`/`setCountLine` before calling `onSaved`, so `user.click()` resolving does not mean `onSaved` has fired yet — wrap the assertion in `waitFor` (this is a real, reproducible race under fake-indexeddb's async timing, not defensive-only styling; the identical bug in Task 12's original test caused it to fail roughly 2 runs out of 3).
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -2508,7 +2510,7 @@ git commit -m "feat: add material picker and counting screen"
 
 ```tsx
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { db } from '../../db/schema'
 import { startInventory } from '../../db/repositories/inventoryRepository'
@@ -2535,7 +2537,7 @@ describe('PassClosePage', () => {
 
     await user.click(screen.getByRole('button', { name: /finish with one pass/i }))
 
-    expect(onFinishedSinglePass).toHaveBeenCalled()
+    await waitFor(() => expect(onFinishedSinglePass).toHaveBeenCalled())
     const updated = await db.inventories.get(inventory.id)
     expect(updated?.status).toBe('closed_single_pass')
   })
@@ -2556,10 +2558,12 @@ describe('PassClosePage', () => {
 
     await user.click(screen.getByRole('button', { name: /start second pass/i }))
 
-    expect(onSecondPassStarted).toHaveBeenCalledWith(expect.any(String))
+    await waitFor(() => expect(onSecondPassStarted).toHaveBeenCalledWith(expect.any(String)))
   })
 })
 ```
+
+Note: both `PassClosePage` button handlers `await` repository calls (`closePass`/`closeInventory`/`startNextPass`) before invoking their callback prop, so `user.click()` resolving does not guarantee the callback has fired yet — both assertions above must be wrapped in `waitFor` (same real race as Task 12 and Task 13, not defensive-only styling).
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -2683,7 +2687,7 @@ git commit -m "feat: add zone summary and pass close pages"
 
 ```tsx
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { db } from '../../db/schema'
 import { startInventory, getOrOpenZoneCount, setCountLine, closeZoneCount, closePass, startNextPass } from '../../db/repositories/inventoryRepository'
@@ -2737,10 +2741,12 @@ describe('VarianceReportPage', () => {
     expect(screen.getByText(/12/)).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /start third pass/i }))
-    expect(onResolved).toHaveBeenCalledWith('needs_3rd_pass', expect.any(String))
+    await waitFor(() => expect(onResolved).toHaveBeenCalledWith('needs_3rd_pass', expect.any(String)))
   })
 })
 ```
+
+Note: the "Start third pass" button's handler awaits `startNextPass` before calling `onResolved`, so that assertion needs `waitFor` (same real race as Tasks 12-14). The first test's `onResolved` assertion does not need it — `onResolved('successful')` is called synchronously in the same effect run, before the `findByText(/successful/i)` it's already gated behind resolves.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -2848,7 +2854,7 @@ git commit -m "feat: add automatic pass-2 reconciliation and variance report pag
 
 ```tsx
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { db } from '../../db/schema'
 import {
@@ -2895,12 +2901,14 @@ describe('ManualResolutionPage', () => {
     await user.type(screen.getByLabelText(/reason/i), 'supervisor recount, agreed on 13')
     await user.click(screen.getByRole('button', { name: /confirm final count/i }))
 
-    expect(onResolved).toHaveBeenCalled()
+    await waitFor(() => expect(onResolved).toHaveBeenCalled())
     const updated = await db.inventories.get(inventory.id)
     expect(updated?.status).toBe('successful')
   })
 })
 ```
+
+Note: `ManualResolutionPage`'s submit handler awaits several repository calls (`reopenTarget`/`setCountLine`/`closeZoneCount`/`closePass`/`closeInventory`) before calling `onResolved`, so — same real race as Tasks 12-15 — the assertion must be wrapped in `waitFor`.
 
 - [ ] **Step 2: Run test to verify it fails**
 
