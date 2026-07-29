@@ -1,0 +1,54 @@
+:root {
+  color-scheme: light;
+  font-family: system-ui, sans-serif;
+  font-size: 18px;
+}
+
+* { box-sizing: border-box; }
+
+body { margin: 0; }
+
+.screen {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+button, .tap-target, input[type="text"], input[type="number"], select {
+  min-height: 44px;
+  font-size: 1rem;
+  padding: 0.5rem 0.75rem;
+}
+
+button {
+  border: none;
+  border-radius: 8px;
+  background: #1a73e8;
+  color: white;
+  cursor: pointer;
+}
+
+button.secondary {
+  background: #e8eaed;
+  color: #202124;
+}
+
+button.danger {
+  background: #d93025;
+}
+
+.list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  border-bottom: 1px solid #ddd;
+  min-height: 44px;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+}
