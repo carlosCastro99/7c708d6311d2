@@ -2188,7 +2188,7 @@ git commit -m "feat: add pure pass-comparison and third-pass reconciliation logi
 
 ```tsx
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { db } from '../../db/schema'
 import { createUser } from '../../db/repositories/userRepository'
@@ -2211,10 +2211,14 @@ describe('StartInventoryPage', () => {
     await user.type(screen.getByLabelText(/inventory name/i), 'Q3 Paper Warehouse')
     await user.click(screen.getByRole('button', { name: /start inventory/i }))
 
-    expect(onStarted).toHaveBeenCalledWith(expect.any(String), expect.any(String))
+    await waitFor(() => {
+      expect(onStarted).toHaveBeenCalledWith(expect.any(String), expect.any(String))
+    })
   })
 })
 ```
+
+Note: `user.click()` resolves once the click event and its synchronous handlers have fired — it does not wait for the submit handler's own `await startInventory(...)` to resolve. Asserting on `onStarted` immediately after the click is a real race (it passed roughly 1 run in 3 in manual testing, not a hypothetical edge case); wrapping the assertion in `waitFor` is required, not optional polish.
 
 - [ ] **Step 2: Run test to verify it fails**
 
