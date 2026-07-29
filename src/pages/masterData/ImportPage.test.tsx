@@ -21,4 +21,18 @@ describe('ImportPage', () => {
     const zones = await listZones()
     expect(zones.map((z) => z.name)).toEqual(['Warehouse A'])
   })
+
+  it('deduplicates duplicate zone names within the same CSV file', async () => {
+    render(<ImportPage />)
+
+    const csv = 'name,sapStorageLocation\nWarehouse A,SL01\nWarehouse A,SL02'
+    const file = new File([csv], 'zones.csv', { type: 'text/csv' })
+    const input = screen.getByLabelText(/zones csv/i) as HTMLInputElement
+    fireEvent.change(input, { target: { files: [file] } })
+
+    expect(await screen.findByText(/imported 1 zone/i)).toBeInTheDocument()
+    const zones = await listZones()
+    expect(zones).toHaveLength(1)
+    expect(zones.map((z) => z.name)).toEqual(['Warehouse A'])
+  })
 })

@@ -19,6 +19,7 @@ export default function ImportPage() {
     for (const row of rows) {
       if (existingNames.has(row.name)) continue
       await createZone({ name: row.name, sapStorageLocation: row.sapStorageLocation })
+      existingNames.add(row.name)
       created++
     }
     setStatus(`Imported ${created} zone(s).`)
