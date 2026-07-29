@@ -2205,7 +2205,9 @@ describe('StartInventoryPage', () => {
     const user = userEvent.setup()
     render(<StartInventoryPage onStarted={onStarted} />)
 
-    await user.selectOptions(await screen.findByLabelText(/user/i), 'Alex')
+    const userSelect = await screen.findByLabelText(/user/i)
+    await screen.findByRole('option', { name: 'Alex' })
+    await user.selectOptions(userSelect, 'Alex')
     await user.type(screen.getByLabelText(/inventory name/i), 'Q3 Paper Warehouse')
     await user.click(screen.getByRole('button', { name: /start inventory/i }))
 
