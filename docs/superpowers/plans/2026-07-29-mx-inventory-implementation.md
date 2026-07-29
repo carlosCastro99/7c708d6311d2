@@ -226,7 +226,7 @@ body { margin: 0; }
   padding: 1rem;
 }
 
-button, .tap-target, input[type="text"], input[type="number"], select {
+button, .tap-target, input, select {
   min-height: 44px;
   font-size: 1rem;
   padding: 0.5rem 0.75rem;
