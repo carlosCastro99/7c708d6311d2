@@ -2182,7 +2182,7 @@ git commit -m "feat: add pure pass-comparison and third-pass reconciliation logi
 
 **Interfaces:**
 - Consumes: `startInventory` from `inventoryRepository.ts`; `listUsers` from `userRepository.ts`; `listZones`, `findZoneByBarcode` from `zoneRepository.ts`; `<BarcodeScanner />`.
-- Produces: `<StartInventoryPage onStarted={(inventoryId: string, passId: string) => void} />`, `<ZonePickerPage passId={string} onZoneChosen={(zoneId: string) => void} />`.
+- Produces: `<StartInventoryPage onStarted={(inventoryId: string, passId: string) => void} />`, `<ZonePickerPage onZoneChosen={(zoneId: string) => void} />` (zones are a global flat list, not scoped by pass, so `ZonePickerPage` takes no `passId` prop — the caller/wizard tracks which pass is active).
 
 - [ ] **Step 1: Write the failing test — `src/pages/inventory/StartInventoryPage.test.tsx`**
 
