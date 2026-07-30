@@ -52,3 +52,8 @@ button.danger {
   gap: 0.25rem;
   margin-bottom: 1rem;
 }
+
+.variance-warning {
+  color: #d93025;
+  font-weight: bold;
+}

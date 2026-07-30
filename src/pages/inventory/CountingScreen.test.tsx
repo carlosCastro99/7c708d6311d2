@@ -33,4 +33,22 @@ describe('CountingScreen', () => {
     const line = await db.countLines.where({ zoneCountId: 'zc-1', materialId: 'material-1' }).first()
     expect(line?.quantity).toBe(2)
   })
+
+  it('visually flags a variance beyond 10% of the expected quantity', async () => {
+    await db.zoneCounts.add({
+      id: 'zc-2', passId: 'pass-1', zoneId: 'zone-1', status: 'open', openedByUserId: 'user-1', openedAt: Date.now(),
+    })
+    render(
+      <CountingScreen
+        zoneCountId="zc-2"
+        materialId="material-1"
+        userId="user-1"
+        expectedQuantity={100}
+        initialQuantity={80}
+        onSaved={() => {}}
+      />,
+    )
+
+    expect(screen.getByText(/variance/i)).toHaveClass('variance-warning')
+  })
 })

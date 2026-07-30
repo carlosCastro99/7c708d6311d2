@@ -22,7 +22,14 @@ export default function CountingScreen({
   return (
     <div className="screen">
       <h1>Count</h1>
-      {expectedQuantity !== undefined && <p>Expected: {expectedQuantity}</p>}
+      {expectedQuantity !== undefined && (
+        <p>
+          Expected: {expectedQuantity}{' '}
+          {Math.abs(quantity - expectedQuantity) / Math.max(expectedQuantity, 1) > 0.1 && (
+            <span className="variance-warning">Variance: {quantity - expectedQuantity}</span>
+          )}
+        </p>
+      )}
       <TapCounter value={quantity} onChange={setQuantity} />
       <PhotoCapture onCapture={setPhotoBlob} />
       <button
