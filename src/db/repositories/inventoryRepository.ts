@@ -1,6 +1,7 @@
 import { db } from '../schema'
 import { newId } from '../id'
 import type { Inventory, InventoryPass, ZoneCount, MaterialCountLine, InventoryStatus } from '../types'
+import { comparePasses } from '../../domain/reconciliation'
 
 export async function startInventory(
   name: string,
@@ -52,10 +53,13 @@ export async function setCountLine(
   expectedQuantity?: number,
   photoBlobId?: string,
 ): Promise<MaterialCountLine> {
-  return db.transaction('rw', db.zoneCounts, db.countLines, db.auditEntries, async () => {
+  return db.transaction('rw', db.zoneCounts, db.countLines, db.auditEntries, db.passes, async () => {
     const zoneCount = await db.zoneCounts.get(zoneCountId)
     if (!zoneCount) throw new Error('Zone count not found')
     if (zoneCount.status === 'closed') throw new Error('Cannot edit a closed zone count')
+
+    const parentPass = await db.passes.get(zoneCount.passId)
+    if (parentPass?.status === 'closed') throw new Error('Cannot edit a count line under a closed pass')
 
     const existing = await db.countLines.where({ zoneCountId, materialId }).first()
     const now = Date.now()
@@ -177,4 +181,28 @@ export async function getPassLines(
   }
 
   return result
+}
+
+export async function closeInventoryAfterReconciliation(
+  inventoryId: string,
+  pass1Id: string,
+  pass2Id: string,
+  pass3Id: string,
+  userId: string,
+): Promise<void> {
+  const pass1Lines = await getPassLines(pass1Id)
+  const pass2Lines = await getPassLines(pass2Id)
+  const pass3Lines = await getPassLines(pass3Id)
+
+  const { mismatched } = comparePasses(pass1Lines, pass2Lines)
+  const pass3Keys = new Set(pass3Lines.map((l) => `${l.zoneId}::${l.materialId}`))
+  const missing = mismatched.filter((m) => !pass3Keys.has(`${m.zoneId}::${m.materialId}`))
+
+  if (missing.length > 0) {
+    const pairList = missing.map((m) => `${m.zoneId}::${m.materialId}`).join(', ')
+    throw new Error(`Cannot close inventory: these pairs still need a third-pass recount: ${pairList}`)
+  }
+
+  await closePass(pass3Id, userId)
+  await closeInventory(inventoryId, 'successful')
 }

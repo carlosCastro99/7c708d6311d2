@@ -1,8 +1,10 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { db } from '../schema'
+import { comparePasses } from '../../domain/reconciliation'
 import {
   startInventory, getOrOpenZoneCount, setCountLine, closeZoneCount,
-  closePass, closeInventory, reopenTarget, getPassLines,
+  closePass, closeInventory, reopenTarget, getPassLines, startNextPass,
+  closeInventoryAfterReconciliation,
 } from './inventoryRepository'
 
 afterEach(async () => {
@@ -84,5 +86,69 @@ describe('inventoryRepository', () => {
 
     const lines = await db.countLines.where({ zoneCountId: zoneCount.id, materialId: 'material-1' }).toArray()
     expect(lines).toHaveLength(1)
+  })
+})
+
+describe('setCountLine rejects edits under a closed pass', () => {
+  it('throws even if the zone count itself was reopened while the pass stays closed', async () => {
+    const { inventory, pass } = await startInventory('Inv', 'user-1')
+    const zc = await getOrOpenZoneCount(pass.id, 'zone-1', 'user-1')
+    await setCountLine(zc.id, 'material-1', 5, 'user-1')
+    await closeZoneCount(zc.id, 'user-1')
+    await closePass(pass.id, 'user-1')
+
+    await reopenTarget('zoneCount', zc.id, 'user-1', 'testing parent-pass guard')
+    await expect(setCountLine(zc.id, 'material-1', 9, 'user-1')).rejects.toThrow(/pass/i)
+  })
+})
+
+describe('closeInventoryAfterReconciliation', () => {
+  async function countAndClose(passId: string, zoneId: string, materialId: string, qty: number) {
+    const zc = await getOrOpenZoneCount(passId, zoneId, 'user-1')
+    await setCountLine(zc.id, materialId, qty, 'user-1')
+    await closeZoneCount(zc.id, 'user-1')
+  }
+
+  it('refuses to close when a mismatched pair was never recounted in pass 3', async () => {
+    const { inventory, pass } = await startInventory('Inv', 'user-1')
+    await countAndClose(pass.id, 'zone-1', 'material-1', 10)
+    await countAndClose(pass.id, 'zone-2', 'material-2', 10)
+    await closePass(pass.id, 'user-1')
+
+    const pass2 = await startNextPass(inventory.id, 2)
+    await countAndClose(pass2.id, 'zone-1', 'material-1', 12)
+    await countAndClose(pass2.id, 'zone-2', 'material-2', 20)
+    await closePass(pass2.id, 'user-1')
+
+    const pass3 = await startNextPass(inventory.id, 3)
+    // Only zone-1/material-1 gets recounted; zone-2/material-2 is left out.
+    await countAndClose(pass3.id, 'zone-1', 'material-1', 12)
+
+    await expect(
+      closeInventoryAfterReconciliation(inventory.id, pass.id, pass2.id, pass3.id, 'user-1'),
+    ).rejects.toThrow(/zone-2.*material-2|material-2.*zone-2/i)
+
+    const updated = await db.inventories.get(inventory.id)
+    expect(updated?.status).toBe('in_progress')
+  })
+
+  it('closes pass 3 and the inventory as successful once every mismatched pair is covered', async () => {
+    const { inventory, pass } = await startInventory('Inv', 'user-1')
+    await countAndClose(pass.id, 'zone-1', 'material-1', 10)
+    await closePass(pass.id, 'user-1')
+
+    const pass2 = await startNextPass(inventory.id, 2)
+    await countAndClose(pass2.id, 'zone-1', 'material-1', 12)
+    await closePass(pass2.id, 'user-1')
+
+    const pass3 = await startNextPass(inventory.id, 3)
+    await countAndClose(pass3.id, 'zone-1', 'material-1', 12)
+
+    await closeInventoryAfterReconciliation(inventory.id, pass.id, pass2.id, pass3.id, 'user-1')
+
+    const updatedInventory = await db.inventories.get(inventory.id)
+    expect(updatedInventory?.status).toBe('successful')
+    const updatedPass3 = await db.passes.get(pass3.id)
+    expect(updatedPass3?.status).toBe('closed')
   })
 })

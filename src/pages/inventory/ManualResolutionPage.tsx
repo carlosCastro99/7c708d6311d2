@@ -4,6 +4,7 @@ import {
 } from '../../db/repositories/inventoryRepository'
 import { resolveThirdPass, type ThirdPassResolution } from '../../domain/reconciliation'
 import type { CountLineSnapshot } from '../../domain/reconciliation'
+import { db } from '../../db/schema'
 
 interface ManualResolutionPageProps {
   inventoryId: string
@@ -46,6 +47,11 @@ export default function ManualResolutionPage({
             return entry && entry.quantity !== '' && entry.reason.trim()
           })
           if (!allComplete) return
+
+          const pass3 = await db.passes.get(pass3Id)
+          if (pass3?.status === 'closed') {
+            await reopenTarget('pass', pass3Id, userId, 'manual resolution recount')
+          }
 
           for (const item of needsManual) {
             const key = `${item.zoneId}-${item.materialId}`
