@@ -29,3 +29,59 @@ export function parseExpectedQuantitiesCsv(
     expectedQuantity: Number(row.expectedQuantity),
   }))
 }
+
+export interface DetailRow {
+  inventoryName: string
+  passNumber: number
+  zoneName: string
+  sapStorageLocation?: string
+  materialName: string
+  sapMaterialNumber?: string
+  unitCode: string
+  expectedQuantity?: number
+  countedQuantity: number
+  variance?: number
+  status: string
+  countedByUser: string
+  timestamp: string
+}
+
+export function buildDetailCsv(rows: DetailRow[]): string {
+  return Papa.unparse(
+    rows.map((r) => ({
+      inventoryName: r.inventoryName,
+      passNumber: r.passNumber,
+      zoneName: r.zoneName,
+      sapStorageLocation: r.sapStorageLocation ?? '',
+      materialName: r.materialName,
+      sapMaterialNumber: r.sapMaterialNumber ?? '',
+      unitCode: r.unitCode,
+      expectedQuantity: r.expectedQuantity ?? '',
+      countedQuantity: r.countedQuantity,
+      variance: r.variance ?? '',
+      status: r.status,
+      countedByUser: r.countedByUser,
+      timestamp: r.timestamp,
+    })),
+  )
+}
+
+export interface SummaryRow {
+  zoneName: string
+  materialName: string
+  officialQuantity: number
+  expectedQuantity?: number
+  variance?: number
+}
+
+export function buildSummaryCsv(rows: SummaryRow[]): string {
+  return Papa.unparse(
+    rows.map((r) => ({
+      zoneName: r.zoneName,
+      materialName: r.materialName,
+      officialQuantity: r.officialQuantity,
+      expectedQuantity: r.expectedQuantity ?? '',
+      variance: r.variance ?? '',
+    })),
+  )
+}
