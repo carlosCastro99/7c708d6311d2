@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { db } from '../../db/schema'
 
+const EMPTY_EXPECTED_PAIRS: Array<{ zoneId: string; materialId: string }> = []
+
 interface ProgressDashboardPageProps {
   passId: string
   expectedPairs?: Array<{ zoneId: string; materialId: string }>
 }
 
-export default function ProgressDashboardPage({ passId, expectedPairs = [] }: ProgressDashboardPageProps) {
+export default function ProgressDashboardPage({ passId, expectedPairs = EMPTY_EXPECTED_PAIRS }: ProgressDashboardPageProps) {
   const [zonesClosed, setZonesClosed] = useState(0)
   const [zonesTotal, setZonesTotal] = useState(0)
   const [lineCount, setLineCount] = useState(0)
