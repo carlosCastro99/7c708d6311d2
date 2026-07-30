@@ -13,6 +13,7 @@ export default function BarcodeScanner({ onDetected }: BarcodeScannerProps) {
     if (!scanning || !videoRef.current) return
     const reader = new BrowserMultiFormatReader()
     let cancelled = false
+    let activeControls: { stop: () => void } | undefined
 
     reader
       .decodeFromVideoDevice(undefined, videoRef.current, (result) => {
@@ -24,12 +25,15 @@ export default function BarcodeScanner({ onDetected }: BarcodeScannerProps) {
       .then((controls) => {
         if (cancelled) {
           controls.stop()
+        } else {
+          activeControls = controls
         }
       })
       .catch(() => setScanning(false))
 
     return () => {
       cancelled = true
+      activeControls?.stop()
     }
   }, [scanning, onDetected])
 
