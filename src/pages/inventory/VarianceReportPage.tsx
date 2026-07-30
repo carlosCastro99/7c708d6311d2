@@ -16,19 +16,28 @@ export default function VarianceReportPage({ inventoryId, pass1Id, pass2Id, onRe
   >(null)
 
   useEffect(() => {
-    (async () => {
+    let cancelled = false
+
+    ;(async () => {
       const pass1Lines: CountLineSnapshot[] = await getPassLines(pass1Id)
       const pass2Lines: CountLineSnapshot[] = await getPassLines(pass2Id)
       const { mismatched: diffs } = comparePasses(pass1Lines, pass2Lines)
 
+      if (cancelled) return
+
       if (diffs.length === 0) {
         await closeInventory(inventoryId, 'successful')
+        if (cancelled) return
         setMismatched([])
         onResolved('successful')
       } else {
         setMismatched(diffs)
       }
     })()
+
+    return () => {
+      cancelled = true
+    }
   }, [inventoryId, pass1Id, pass2Id, onResolved])
 
   if (mismatched === null) return <div className="screen">Comparing passes…</div>
