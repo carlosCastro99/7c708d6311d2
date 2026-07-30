@@ -50,4 +50,38 @@ describe('ManualResolutionPage', () => {
     const updated = await db.inventories.get(inventory.id)
     expect(updated?.status).toBe('successful')
   })
+
+  it('shows an error and does not resolve when the completeness check rejects', async () => {
+    const { inventory, pass } = await startInventory('Inv', 'user-1')
+    await countAndClose(pass.id, 'zone-1', 'material-1', 10)
+    await countAndClose(pass.id, 'zone-2', 'material-2', 10)
+    await closePass(pass.id, 'user-1')
+
+    const pass2 = await startNextPass(inventory.id, 2)
+    await countAndClose(pass2.id, 'zone-1', 'material-1', 12)
+    await countAndClose(pass2.id, 'zone-2', 'material-2', 20)
+    await closePass(pass2.id, 'user-1')
+
+    const pass3 = await startNextPass(inventory.id, 3)
+    // Only recount zone-1/material-1 (all three differ) -- zone-2/material-2 is left uncounted.
+    await countAndClose(pass3.id, 'zone-1', 'material-1', 14)
+
+    const onResolved = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <ManualResolutionPage
+        inventoryId={inventory.id} pass1Id={pass.id} pass2Id={pass2.id} pass3Id={pass3.id}
+        userId="user-1" onResolved={onResolved}
+      />,
+    )
+
+    await user.type(await screen.findByLabelText(/final quantity/i), '13')
+    await user.type(screen.getByLabelText(/reason/i), 'supervisor recount')
+    await user.click(screen.getByRole('button', { name: /confirm final count/i }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/zone-2.*material-2|material-2.*zone-2/i)
+    expect(onResolved).not.toHaveBeenCalled()
+    const updated = await db.inventories.get(inventory.id)
+    expect(updated?.status).toBe('in_progress')
+  })
 })
