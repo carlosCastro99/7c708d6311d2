@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { db } from '../schema'
-import { comparePasses } from '../../domain/reconciliation'
+import { comparePasses, resolveThirdPass } from '../../domain/reconciliation'
 import {
   startInventory, getOrOpenZoneCount, setCountLine, closeZoneCount,
   closePass, closeInventory, reopenTarget, getPassLines, startNextPass,
@@ -150,5 +150,62 @@ describe('closeInventoryAfterReconciliation', () => {
     expect(updatedInventory?.status).toBe('successful')
     const updatedPass3 = await db.passes.get(pass3.id)
     expect(updatedPass3?.status).toBe('closed')
+  })
+})
+
+describe('full pass1 -> pass2 -> mismatch -> pass3 -> resolve lifecycle', () => {
+  async function countAndClose(passId: string, zoneId: string, materialId: string, qty: number) {
+    const zc = await getOrOpenZoneCount(passId, zoneId, 'user-1')
+    await setCountLine(zc.id, materialId, qty, 'user-1')
+    await closeZoneCount(zc.id, 'user-1')
+  }
+
+  it('drives a real inventory through matched and mismatched lines to a correct final state', async () => {
+    const { inventory, pass } = await startInventory('Lifecycle Inv', 'user-1')
+
+    // zone-1/material-1 will match across pass 1 and 2 (no third-pass involvement).
+    // zone-2/material-2 will mismatch and resolve via 2-of-3 (pass3 matches pass2).
+    // zone-3/material-3 will mismatch and require manual resolution (all three differ).
+    await countAndClose(pass.id, 'zone-1', 'material-1', 10)
+    await countAndClose(pass.id, 'zone-2', 'material-2', 20)
+    await countAndClose(pass.id, 'zone-3', 'material-3', 30)
+    await closePass(pass.id, 'user-1')
+
+    const pass2 = await startNextPass(inventory.id, 2)
+    await countAndClose(pass2.id, 'zone-1', 'material-1', 10)
+    await countAndClose(pass2.id, 'zone-2', 'material-2', 22)
+    await countAndClose(pass2.id, 'zone-3', 'material-3', 33)
+    await closePass(pass2.id, 'user-1')
+
+    const pass1Lines = await getPassLines(pass.id)
+    const pass2Lines = await getPassLines(pass2.id)
+    const { matched, mismatched } = comparePasses(pass1Lines, pass2Lines)
+    expect(matched).toHaveLength(1)
+    expect(mismatched).toHaveLength(2)
+
+    const pass3 = await startNextPass(inventory.id, 3)
+    // Recount only the mismatched pairs, per the app's scoped third-pass rule.
+    await countAndClose(pass3.id, 'zone-2', 'material-2', 22) // matches pass 2
+    await countAndClose(pass3.id, 'zone-3', 'material-3', 36) // matches neither -> manual
+
+    const pass3Lines = await getPassLines(pass3.id)
+    const resolutions = resolveThirdPass(pass1Lines, pass2Lines, pass3Lines)
+    expect(resolutions).toHaveLength(2)
+    expect(resolutions.find((r) => r.zoneId === 'zone-2')?.resolution).toBe('pass3_matches_pass2')
+    expect(resolutions.find((r) => r.zoneId === 'zone-3')?.resolution).toBe('needs_manual_resolution')
+
+    // The manual line gets a supervisor-entered final value before closing.
+    const zc3 = await getOrOpenZoneCount(pass3.id, 'zone-3', 'user-1')
+    await reopenTarget('zoneCount', zc3.id, 'user-1', 'supervisor agreed final count')
+    await setCountLine(zc3.id, 'material-3', 35, 'user-1')
+    await closeZoneCount(zc3.id, 'user-1')
+
+    await closeInventoryAfterReconciliation(inventory.id, pass.id, pass2.id, pass3.id, 'user-1')
+
+    const finalInventory = await db.inventories.get(inventory.id)
+    expect(finalInventory?.status).toBe('successful')
+
+    const finalZone3Line = await db.countLines.where({ zoneCountId: zc3.id, materialId: 'material-3' }).first()
+    expect(finalZone3Line?.quantity).toBe(35)
   })
 })
