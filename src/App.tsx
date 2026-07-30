@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, useNavigate, useParams } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Link, useNavigate, useParams } from 'react-router-dom'
 import HomePage from './pages/HomePage'
 import UsersPage from './pages/masterData/UsersPage'
 import UnitsPage from './pages/masterData/UnitsPage'
@@ -13,11 +13,11 @@ function MasterDataHome() {
     <div className="screen">
       <h1>Master Data</h1>
       <ul>
-        <li><a href="/master-data/users">Users</a></li>
-        <li><a href="/master-data/units">Units</a></li>
-        <li><a href="/master-data/zones">Zones</a></li>
-        <li><a href="/master-data/materials">Materials</a></li>
-        <li><a href="/master-data/import">Import from CSV</a></li>
+        <li><Link to="/master-data/users">Users</Link></li>
+        <li><Link to="/master-data/units">Units</Link></li>
+        <li><Link to="/master-data/zones">Zones</Link></li>
+        <li><Link to="/master-data/materials">Materials</Link></li>
+        <li><Link to="/master-data/import">Import from CSV</Link></li>
       </ul>
     </div>
   )
