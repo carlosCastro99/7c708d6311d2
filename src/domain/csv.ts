@@ -63,6 +63,7 @@ export function buildDetailCsv(rows: DetailRow[]): string {
       countedByUser: r.countedByUser,
       timestamp: r.timestamp,
     })),
+    { newline: '\n' },
   )
 }
 
@@ -83,5 +84,6 @@ export function buildSummaryCsv(rows: SummaryRow[]): string {
       expectedQuantity: r.expectedQuantity ?? '',
       variance: r.variance ?? '',
     })),
+    { newline: '\n' },
   )
 }
