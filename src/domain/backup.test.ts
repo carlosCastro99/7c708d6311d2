@@ -29,5 +29,6 @@ describe('backup', () => {
     expect(users.map((u) => u.name)).toEqual(['Alex'])
     expect(zones.map((z) => z.name)).toEqual(['Warehouse A'])
     expect(photo?.blob.size).toBeGreaterThan(0)
+    expect(await photo?.blob.text()).toBe('fake-bytes')
   })
 })
