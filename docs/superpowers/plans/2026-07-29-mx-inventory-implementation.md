@@ -3567,12 +3567,14 @@ Expected: FAIL — module not found.
 import { useEffect, useState } from 'react'
 import { db } from '../../db/schema'
 
+const EMPTY_EXPECTED_PAIRS: Array<{ zoneId: string; materialId: string }> = []
+
 interface ProgressDashboardPageProps {
   passId: string
   expectedPairs?: Array<{ zoneId: string; materialId: string }>
 }
 
-export default function ProgressDashboardPage({ passId, expectedPairs = [] }: ProgressDashboardPageProps) {
+export default function ProgressDashboardPage({ passId, expectedPairs = EMPTY_EXPECTED_PAIRS }: ProgressDashboardPageProps) {
   const [zonesClosed, setZonesClosed] = useState(0)
   const [zonesTotal, setZonesTotal] = useState(0)
   const [lineCount, setLineCount] = useState(0)
@@ -3623,6 +3625,8 @@ export default function ProgressDashboardPage({ passId, expectedPairs = [] }: Pr
   )
 }
 ```
+
+Note: `expectedPairs`'s default must be a module-level stable reference (`EMPTY_EXPECTED_PAIRS`, declared above the component), not an inline `[]` in the parameter list. An inline `[]` default creates a new array on every render where the caller omits the prop (the component's primary documented usage, `<ProgressDashboardPage passId={string} />` alone) — since that new reference sits in the `useEffect` dependency array, `setNotCounted` triggering a re-render would recreate the default, which the effect sees as "changed," re-firing it forever: an infinite loop of IndexedDB reads for as long as the page (meant to be left open to watch live progress) stays mounted.
 
 - [ ] **Step 4: Run test to verify it passes**
 
