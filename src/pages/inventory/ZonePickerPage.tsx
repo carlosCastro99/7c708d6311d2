@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { listZones, findZoneByBarcode } from '../../db/repositories/zoneRepository'
 import type { Zone } from '../../db/types'
 import BarcodeScanner from '../../components/BarcodeScanner'
@@ -14,15 +14,18 @@ export default function ZonePickerPage({ onZoneChosen }: ZonePickerPageProps) {
     listZones().then(setZones)
   }, [])
 
+  const handleDetected = useCallback(
+    async (value: string) => {
+      const zone = await findZoneByBarcode(value)
+      if (zone) onZoneChosen(zone.id)
+    },
+    [onZoneChosen],
+  )
+
   return (
     <div className="screen">
       <h1>Pick a Zone</h1>
-      <BarcodeScanner
-        onDetected={async (value) => {
-          const zone = await findZoneByBarcode(value)
-          if (zone) onZoneChosen(zone.id)
-        }}
-      />
+      <BarcodeScanner onDetected={handleDetected} />
       <ul>
         {zones.map((z) => (
           <li key={z.id}>
