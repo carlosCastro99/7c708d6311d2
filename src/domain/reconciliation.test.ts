@@ -57,4 +57,21 @@ describe('resolveThirdPass', () => {
       { zoneId: 'z1', materialId: 'm1', resolution: 'needs_manual_resolution' },
     ])
   })
+
+  it('only resolves lines that were actually recounted in pass 3, ignoring already-matched lines', () => {
+    const pass1 = [
+      { zoneId: 'z1', materialId: 'm1', quantity: 10 },
+      { zoneId: 'z2', materialId: 'm2', quantity: 10 },
+    ]
+    const pass2 = [
+      { zoneId: 'z1', materialId: 'm1', quantity: 12 },
+      { zoneId: 'z2', materialId: 'm2', quantity: 10 },
+    ]
+    const pass3 = [
+      { zoneId: 'z1', materialId: 'm1', quantity: 14 },
+    ]
+    expect(resolveThirdPass(pass1, pass2, pass3)).toEqual([
+      { zoneId: 'z1', materialId: 'm1', resolution: 'needs_manual_resolution' },
+    ])
+  })
 })

@@ -51,6 +51,10 @@ export type ThirdPassResolution = {
   officialQuantity?: number
 }
 
+// Only considers Zone+Material lines present in pass3 — callers must ensure
+// pass3 already contains just the pairs that mismatched between pass1 and
+// pass2 (guaranteed by the app's scoped third-pass recount). A line absent
+// from pass3 is treated as not needing resolution, never as a mismatch.
 export function resolveThirdPass(
   pass1: CountLineSnapshot[],
   pass2: CountLineSnapshot[],
@@ -59,11 +63,10 @@ export function resolveThirdPass(
   const map1 = toMap(pass1)
   const map2 = toMap(pass2)
   const map3 = toMap(pass3)
-  const allKeys = new Set([...map1.keys(), ...map2.keys(), ...map3.keys()])
 
   const results: ThirdPassResolution[] = []
 
-  for (const key of allKeys) {
+  for (const key of map3.keys()) {
     const [zoneId, materialId] = key.split('::')
     const q1 = map1.get(key) ?? 0
     const q2 = map2.get(key) ?? 0

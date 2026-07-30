@@ -40,10 +40,16 @@ export default function ManualResolutionPage({
       <form
         onSubmit={async (e) => {
           e.preventDefault()
-          for (const item of needsManual) {
+          const allComplete = needsManual.every((item) => {
             const key = `${item.zoneId}-${item.materialId}`
             const entry = entries[key]
-            if (!entry || entry.quantity === '' || !entry.reason.trim()) return
+            return entry && entry.quantity !== '' && entry.reason.trim()
+          })
+          if (!allComplete) return
+
+          for (const item of needsManual) {
+            const key = `${item.zoneId}-${item.materialId}`
+            const entry = entries[key]!
             const zoneCount = await getOrOpenZoneCount(pass3Id, item.zoneId, userId)
             if (zoneCount.status === 'closed') {
               await reopenTarget('zoneCount', zoneCount.id, userId, entry.reason)
@@ -64,7 +70,7 @@ export default function ManualResolutionPage({
               <label htmlFor={`qty-${key}`}>Final quantity</label>
               <input
                 id={`qty-${key}`}
-                aria-label="final quantity"
+                aria-label={`final quantity for zone ${item.zoneId} material ${item.materialId}`}
                 type="number"
                 value={entries[key]?.quantity ?? ''}
                 onChange={(e) =>
@@ -74,7 +80,7 @@ export default function ManualResolutionPage({
               <label htmlFor={`reason-${key}`}>Reason</label>
               <input
                 id={`reason-${key}`}
-                aria-label="reason"
+                aria-label={`reason for zone ${item.zoneId} material ${item.materialId}`}
                 value={entries[key]?.reason ?? ''}
                 onChange={(e) =>
                   setEntries((prev) => ({ ...prev, [key]: { quantity: prev[key]?.quantity ?? '', reason: e.target.value } }))
