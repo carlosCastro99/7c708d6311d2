@@ -16,7 +16,7 @@ describe('MxInventoryDB', () => {
     const names = db.tables.map((t) => t.name).sort()
     expect(names).toEqual(
       [
-        'auditEntries', 'countLines', 'inventories', 'materials', 'passes',
+        'auditEntries', 'countLines', 'expectedQuantities', 'inventories', 'materials', 'passes',
         'photos', 'reopenLogs', 'units', 'users', 'zoneCounts', 'zones',
       ].sort(),
     )

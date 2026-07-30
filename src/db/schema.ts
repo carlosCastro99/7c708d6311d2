@@ -1,7 +1,7 @@
 import Dexie, { type Table } from 'dexie'
 import type {
   User, UnitOfMeasure, Material, Zone, Inventory, InventoryPass,
-  ZoneCount, MaterialCountLine, CountAuditEntry, ReopenLog, PhotoBlob,
+  ZoneCount, MaterialCountLine, CountAuditEntry, ReopenLog, PhotoBlob, ExpectedQuantity,
 } from './types'
 
 export class MxInventoryDB extends Dexie {
@@ -16,6 +16,7 @@ export class MxInventoryDB extends Dexie {
   auditEntries!: Table<CountAuditEntry, string>
   reopenLogs!: Table<ReopenLog, string>
   photos!: Table<PhotoBlob, string>
+  expectedQuantities!: Table<ExpectedQuantity, string>
 
   constructor(name = 'mx-inventory') {
     super(name)
@@ -31,6 +32,20 @@ export class MxInventoryDB extends Dexie {
       auditEntries: 'id, materialCountLineId, timestamp',
       reopenLogs: 'id, targetType, targetId, timestamp',
       photos: 'id',
+    })
+    this.version(2).stores({
+      users: 'id, name',
+      units: 'id, code',
+      materials: 'id, name, sapMaterialNumber, barcodeValue, active',
+      zones: 'id, name, sapStorageLocation, barcodeValue',
+      inventories: 'id, status, createdAt',
+      passes: 'id, inventoryId, passNumber',
+      zoneCounts: 'id, passId, zoneId, status',
+      countLines: 'id, zoneCountId, materialId',
+      auditEntries: 'id, materialCountLineId, timestamp',
+      reopenLogs: 'id, targetType, targetId, timestamp',
+      photos: 'id',
+      expectedQuantities: 'id, zoneId, materialId',
     })
   }
 }

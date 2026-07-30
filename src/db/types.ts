@@ -98,3 +98,10 @@ export interface PhotoBlob {
   blob: Blob
   createdAt: number
 }
+
+export interface ExpectedQuantity {
+  id: ID
+  zoneId: ID
+  materialId: ID
+  expectedQuantity: number
+}
