@@ -3427,14 +3427,23 @@ export async function exportBackup(): Promise<Blob> {
   zip.file('data.json', JSON.stringify(data))
   const photosFolder = zip.folder('photos')!
   for (const photo of photos) {
-    photosFolder.file(`${photo.id}.bin`, photo.blob)
+    // Hand JSZip a Uint8Array, never the Blob itself: JSZip's Blob handling
+    // goes through the browser FileReader API internally, which does its own
+    // WebIDL type check independent of `globalThis.Blob` — so a Blob that is
+    // valid for IndexedDB storage can still be rejected there. Uint8Array has
+    // no such check and works identically in tests and real browsers.
+    const bytes = new Uint8Array(await photo.blob.arrayBuffer())
+    photosFolder.file(`${photo.id}.bin`, bytes)
   }
 
   return zip.generateAsync({ type: 'blob' })
 }
 
 export async function importBackup(zipBlob: Blob): Promise<void> {
-  const zip = await JSZip.loadAsync(zipBlob)
+  // Same reasoning as the export side: hand JSZip a Uint8Array, not the Blob
+  // itself, to avoid JSZip's internal FileReader-based Blob handling.
+  const zipBytes = new Uint8Array(await zipBlob.arrayBuffer())
+  const zip = await JSZip.loadAsync(zipBytes)
   const dataFile = zip.file('data.json')
   if (!dataFile) throw new Error('Invalid backup: missing data.json')
 
@@ -3448,11 +3457,14 @@ export async function importBackup(zipBlob: Blob): Promise<void> {
   for (const photoId of data.photoIds ?? []) {
     const file = zip.file(`photos/${photoId}.bin`)
     if (!file) continue
-    const blob = await file.async('blob')
+    const bytes = await file.async('uint8array')
+    const blob = new Blob([new Uint8Array(bytes)])
     await db.photos.put({ id: photoId, blob, createdAt: Date.now() })
   }
 }
 ```
+
+Note: this deviates from a naive "pass the Blob straight through" implementation for a real reason, not defensive styling. jsdom's `FileReader` (which JSZip's `.async('blob')`/Blob-input handling uses internally in a non-browser DOM environment) performs its own WebIDL Blob-type check that is independent of whatever `globalThis.Blob` currently points to — so the Node `Blob` this project deliberately aliases in (`src/test/setup.ts`, to make IndexedDB storage work under fake-indexeddb) is rejected by jsdom's FileReader with `Failed to execute 'readAsArrayBuffer' on 'FileReader': parameter 1 is not of type 'Blob'`. Routing all JSZip input/output through `Uint8Array`/`ArrayBuffer` instead sidesteps jsdom's FileReader entirely (JSZip only invokes it for the `'blob'` type specifically), and this is also just as correct in a real browser — `Blob.prototype.arrayBuffer()` is universally supported.
 
 - [ ] **Step 4: Run test to verify it passes**
 
