@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { db } from '../db/schema'
 import { buildDetailCsv, buildSummaryCsv, type DetailRow, type SummaryRow } from '../domain/csv'
+import { comparePasses } from '../domain/reconciliation'
+import type { CountLineSnapshot } from '../domain/reconciliation'
 
 interface ExportPageProps {
   inventoryId: string
@@ -17,6 +19,38 @@ export default function ExportPage({ inventoryId }: ExportPageProps) {
       const passes = (await db.passes.where('inventoryId').equals(inventoryId).toArray())
         .sort((a, b) => a.passNumber - b.passNumber)
 
+      // Precompute a status per zone+material key using the same reconciliation
+      // logic the app uses to drive the wizard, so the export reflects reality
+      // rather than a hardcoded placeholder.
+      const statusByKey = new Map<string, 'matched' | 'mismatched' | 'manually_resolved'>()
+      const manuallyResolvedKeys = new Set<string>()
+      const pass1 = passes.find((p) => p.passNumber === 1)
+      const pass2 = passes.find((p) => p.passNumber === 2)
+      const pass3 = passes.find((p) => p.passNumber === 3)
+      if (pass1 && pass2) {
+        const getSnapshot = async (passId: string): Promise<CountLineSnapshot[]> => {
+          const zcs = await db.zoneCounts.where('passId').equals(passId).toArray()
+          const snapshot: CountLineSnapshot[] = []
+          for (const zc of zcs) {
+            const lines = await db.countLines.where('zoneCountId').equals(zc.id).toArray()
+            for (const line of lines) snapshot.push({ zoneId: zc.zoneId, materialId: line.materialId, quantity: line.quantity })
+          }
+          return snapshot
+        }
+        const pass1Lines = await getSnapshot(pass1.id)
+        const pass2Lines = await getSnapshot(pass2.id)
+        const { matched, mismatched } = comparePasses(pass1Lines, pass2Lines)
+        for (const m of matched) statusByKey.set(`${m.zoneId}::${m.materialId}`, 'matched')
+        for (const m of mismatched) statusByKey.set(`${m.zoneId}::${m.materialId}`, 'mismatched')
+        if (pass3) {
+          // Manual resolution applies to the pass3 recount line itself, not
+          // retroactively to the pass1/pass2 lines that produced the
+          // mismatch — those should keep showing 'mismatched'.
+          const pass3Lines = await getSnapshot(pass3.id)
+          for (const line of pass3Lines) manuallyResolvedKeys.add(`${line.zoneId}::${line.materialId}`)
+        }
+      }
+
       const detailRows: DetailRow[] = []
       const officialByZoneMaterial = new Map<string, SummaryRow>()
 
@@ -30,6 +64,10 @@ export default function ExportPage({ inventoryId }: ExportPageProps) {
             const unit = material ? await db.units.get(material.unitId) : undefined
             const updatedBy = await db.users.get(line.updatedByUserId)
             const variance = line.expectedQuantity !== undefined ? line.quantity - line.expectedQuantity : undefined
+            const key = `${zc.zoneId}::${line.materialId}`
+            const status = pass.id === pass3?.id && manuallyResolvedKeys.has(key)
+              ? 'manually_resolved'
+              : statusByKey.get(key) ?? 'matched'
 
             detailRows.push({
               inventoryName: inventory.name,
@@ -42,12 +80,11 @@ export default function ExportPage({ inventoryId }: ExportPageProps) {
               expectedQuantity: line.expectedQuantity,
               countedQuantity: line.quantity,
               variance,
-              status: 'recorded',
+              status,
               countedByUser: updatedBy?.name ?? line.updatedByUserId,
               timestamp: new Date(line.updatedAt).toISOString(),
             })
 
-            const key = `${zc.zoneId}::${line.materialId}`
             officialByZoneMaterial.set(key, {
               zoneName: zone?.name ?? zc.zoneId,
               materialName: material?.name ?? line.materialId,
