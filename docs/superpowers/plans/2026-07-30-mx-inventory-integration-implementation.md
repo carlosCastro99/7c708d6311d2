@@ -1270,6 +1270,17 @@ export default function ManualResolutionPage({
     })
     if (!allComplete) return
 
+    // setCountLine (Task 4) now also rejects writes when the zone count's
+    // parent pass is closed, not just when the zone count itself is closed.
+    // By the time manual resolution runs, pass 3 is frequently already
+    // closed (e.g. after a prior close attempt, or in tests that close it
+    // explicitly), so reopen the pass itself before reopening any of its
+    // zone counts -- otherwise setCountLine would reject every write below.
+    const pass3 = await db.passes.get(pass3Id)
+    if (pass3?.status === 'closed') {
+      await reopenTarget('pass', pass3Id, userId, 'manual resolution recount')
+    }
+
     for (const item of needsManual) {
       const key = `${item.zoneId}-${item.materialId}`
       const entry = entries[key]!
