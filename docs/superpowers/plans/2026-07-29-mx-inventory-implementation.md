@@ -2065,6 +2065,23 @@ describe('resolveThirdPass', () => {
       { zoneId: 'z1', materialId: 'm1', resolution: 'needs_manual_resolution' },
     ])
   })
+
+  it('only resolves lines that were actually recounted in pass 3, ignoring already-matched lines', () => {
+    const pass1 = [
+      { zoneId: 'z1', materialId: 'm1', quantity: 10 },
+      { zoneId: 'z2', materialId: 'm2', quantity: 10 },
+    ]
+    const pass2 = [
+      { zoneId: 'z1', materialId: 'm1', quantity: 12 },
+      { zoneId: 'z2', materialId: 'm2', quantity: 10 },
+    ]
+    const pass3 = [
+      { zoneId: 'z1', materialId: 'm1', quantity: 14 },
+    ]
+    expect(resolveThirdPass(pass1, pass2, pass3)).toEqual([
+      { zoneId: 'z1', materialId: 'm1', resolution: 'needs_manual_resolution' },
+    ])
+  })
 })
 ```
 
@@ -2129,6 +2146,10 @@ export type ThirdPassResolution = {
   officialQuantity?: number
 }
 
+// Only considers Zone+Material lines present in pass3 — callers must ensure
+// pass3 already contains just the pairs that mismatched between pass1 and
+// pass2 (guaranteed by the app's scoped third-pass recount). A line absent
+// from pass3 is treated as not needing resolution, never as a mismatch.
 export function resolveThirdPass(
   pass1: CountLineSnapshot[],
   pass2: CountLineSnapshot[],
@@ -2137,11 +2158,10 @@ export function resolveThirdPass(
   const map1 = toMap(pass1)
   const map2 = toMap(pass2)
   const map3 = toMap(pass3)
-  const allKeys = new Set([...map1.keys(), ...map2.keys(), ...map3.keys()])
 
   const results: ThirdPassResolution[] = []
 
-  for (const key of allKeys) {
+  for (const key of map3.keys()) {
     const [zoneId, materialId] = key.split('::')
     const q1 = map1.get(key) ?? 0
     const q2 = map2.get(key) ?? 0
@@ -2990,10 +3010,16 @@ export default function ManualResolutionPage({
       <form
         onSubmit={async (e) => {
           e.preventDefault()
-          for (const item of needsManual) {
+          const allComplete = needsManual.every((item) => {
             const key = `${item.zoneId}-${item.materialId}`
             const entry = entries[key]
-            if (!entry || entry.quantity === '' || !entry.reason.trim()) return
+            return entry && entry.quantity !== '' && entry.reason.trim()
+          })
+          if (!allComplete) return
+
+          for (const item of needsManual) {
+            const key = `${item.zoneId}-${item.materialId}`
+            const entry = entries[key]!
             const zoneCount = await getOrOpenZoneCount(pass3Id, item.zoneId, userId)
             if (zoneCount.status === 'closed') {
               await reopenTarget('zoneCount', zoneCount.id, userId, entry.reason)
@@ -3014,7 +3040,7 @@ export default function ManualResolutionPage({
               <label htmlFor={`qty-${key}`}>Final quantity</label>
               <input
                 id={`qty-${key}`}
-                aria-label="final quantity"
+                aria-label={`final quantity for zone ${item.zoneId} material ${item.materialId}`}
                 type="number"
                 value={entries[key]?.quantity ?? ''}
                 onChange={(e) =>
@@ -3024,7 +3050,7 @@ export default function ManualResolutionPage({
               <label htmlFor={`reason-${key}`}>Reason</label>
               <input
                 id={`reason-${key}`}
-                aria-label="reason"
+                aria-label={`reason for zone ${item.zoneId} material ${item.materialId}`}
                 value={entries[key]?.reason ?? ''}
                 onChange={(e) =>
                   setEntries((prev) => ({ ...prev, [key]: { quantity: prev[key]?.quantity ?? '', reason: e.target.value } }))
