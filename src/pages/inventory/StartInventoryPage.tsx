@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { listUsers } from '../../db/repositories/userRepository'
 import { startInventory } from '../../db/repositories/inventoryRepository'
+import { useAsyncAction } from '../../hooks/useAsyncAction'
+import ErrorBanner from '../../components/ErrorBanner'
 import type { User } from '../../db/types'
 
 interface StartInventoryPageProps {
-  onStarted: (inventoryId: string, passId: string) => void
+  onStarted: (inventoryId: string, passId: string, userId: string) => void
 }
 
 export default function StartInventoryPage({ onStarted }: StartInventoryPageProps) {
@@ -19,15 +21,20 @@ export default function StartInventoryPage({ onStarted }: StartInventoryPageProp
     })
   }, [])
 
+  const [submit, { pending, error }] = useAsyncAction(async () => {
+    if (!userId || !name.trim()) return
+    const { inventory, pass } = await startInventory(name.trim(), userId)
+    onStarted(inventory.id, pass.id, userId)
+  })
+
   return (
     <div className="screen">
       <h1>Start Inventory</h1>
+      {error && <ErrorBanner message={error.message} />}
       <form
-        onSubmit={async (e) => {
+        onSubmit={(e) => {
           e.preventDefault()
-          if (!userId || !name.trim()) return
-          const { inventory, pass } = await startInventory(name.trim(), userId)
-          onStarted(inventory.id, pass.id)
+          submit()
         }}
       >
         <div className="form-row">
@@ -42,7 +49,7 @@ export default function StartInventoryPage({ onStarted }: StartInventoryPageProp
           <label htmlFor="start-inv-name">Inventory name</label>
           <input id="start-inv-name" value={name} onChange={(e) => setName(e.target.value)} />
         </div>
-        <button type="submit">Start inventory</button>
+        <button type="submit" disabled={pending}>Start inventory</button>
       </form>
     </div>
   )

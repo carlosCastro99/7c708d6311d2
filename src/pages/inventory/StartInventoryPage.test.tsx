@@ -23,7 +23,7 @@ describe('StartInventoryPage', () => {
     await user.click(screen.getByRole('button', { name: /start inventory/i }))
 
     await waitFor(() => {
-      expect(onStarted).toHaveBeenCalledWith(expect.any(String), expect.any(String))
+      expect(onStarted).toHaveBeenCalledWith(expect.any(String), expect.any(String), expect.any(String))
     })
   })
 })

@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Link, useNavigate, useParams } from 'react-router-dom'
+import { CountingSessionProvider, useCountingSession } from './context/CountingSession'
 import HomePage from './pages/HomePage'
 import UsersPage from './pages/masterData/UsersPage'
 import UnitsPage from './pages/masterData/UnitsPage'
@@ -6,7 +7,10 @@ import ZonesPage from './pages/masterData/ZonesPage'
 import MaterialsPage from './pages/masterData/MaterialsPage'
 import ImportPage from './pages/masterData/ImportPage'
 import StartInventoryPage from './pages/inventory/StartInventoryPage'
+import CountingWizard from './pages/inventory/CountingWizard'
+import InventoriesListPage from './pages/inventory/InventoriesListPage'
 import ExportPage from './pages/ExportPage'
+import BackupPage from './pages/BackupPage'
 
 function MasterDataHome() {
   return (
@@ -25,9 +29,13 @@ function MasterDataHome() {
 
 function StartInventoryRoute() {
   const navigate = useNavigate()
+  const { setSession } = useCountingSession()
   return (
     <StartInventoryPage
-      onStarted={(inventoryId, passId) => navigate(`/inventory/${inventoryId}/pass/${passId}/zone-picker`)}
+      onStarted={(inventoryId, passId, userId) => {
+        setSession({ userId, inventoryId, passId })
+        navigate(`/inventory/${inventoryId}/pass/${passId}`)
+      }}
     />
   )
 }
@@ -39,19 +47,25 @@ function ExportRoute() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/master-data" element={<MasterDataHome />} />
-        <Route path="/master-data/users" element={<UsersPage />} />
-        <Route path="/master-data/units" element={<UnitsPage />} />
-        <Route path="/master-data/zones" element={<ZonesPage />} />
-        <Route path="/master-data/materials" element={<MaterialsPage />} />
-        <Route path="/master-data/import" element={<ImportPage />} />
-        <Route path="/inventory/new" element={<StartInventoryRoute />} />
-        <Route path="/inventory/:inventoryId/export" element={<ExportRoute />} />
-      </Routes>
-    </BrowserRouter>
+    <CountingSessionProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/master-data" element={<MasterDataHome />} />
+          <Route path="/master-data/users" element={<UsersPage />} />
+          <Route path="/master-data/units" element={<UnitsPage />} />
+          <Route path="/master-data/zones" element={<ZonesPage />} />
+          <Route path="/master-data/materials" element={<MaterialsPage />} />
+          <Route path="/master-data/import" element={<ImportPage />} />
+          <Route path="/inventory/new" element={<StartInventoryRoute />} />
+          <Route path="/inventory/:inventoryId/pass/:passId" element={<CountingWizard />} />
+          <Route path="/inventory/:inventoryId/export" element={<ExportRoute />} />
+          <Route path="/inventories" element={<InventoriesListPage />} />
+          <Route path="/backup" element={<BackupPage />} />
+          <Route path="*" element={<HomePage />} />
+        </Routes>
+      </BrowserRouter>
+    </CountingSessionProvider>
   )
 }
 
