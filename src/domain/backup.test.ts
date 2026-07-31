@@ -3,7 +3,7 @@ import { db } from '../db/schema'
 import { createUser } from '../db/repositories/userRepository'
 import { createZone } from '../db/repositories/zoneRepository'
 import { savePhoto } from '../db/repositories/photoRepository'
-import { exportBackup, importBackup } from './backup'
+import { exportBackup, importBackup, clearAllData } from './backup'
 
 afterEach(async () => {
   await Promise.all(db.tables.map((t) => t.clear()))
@@ -30,5 +30,28 @@ describe('backup', () => {
     expect(zones.map((z) => z.name)).toEqual(['Warehouse A'])
     expect(photo?.blob.size).toBeGreaterThan(0)
     expect(await photo?.blob.text()).toBe('fake-bytes')
+  })
+
+  it('preserves photo MIME type and original createdAt through export and import', async () => {
+    const originalBlob = new Blob(['fake-bytes'], { type: 'image/jpeg' })
+    const photoId = await savePhoto(originalBlob)
+    const before = await db.photos.get(photoId)
+
+    const zip = await exportBackup()
+    await Promise.all(db.tables.map((t) => t.clear()))
+    await importBackup(zip)
+
+    const after = await db.photos.get(photoId)
+    expect(after?.blob.type).toBe('image/jpeg')
+    expect(after?.createdAt).toBe(before?.createdAt)
+  })
+
+  it('clearAllData empties every table', async () => {
+    await createUser('Alex')
+    await savePhoto(new Blob(['x']))
+    await clearAllData()
+
+    expect(await db.users.count()).toBe(0)
+    expect(await db.photos.count()).toBe(0)
   })
 })

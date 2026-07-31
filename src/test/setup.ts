@@ -18,6 +18,21 @@ if (!File.prototype.text) {
   })
 }
 
+// Add File.arrayBuffer() support for jsdom (jsdom's File, unlike the
+// overridden Node Blob above, does not implement it natively).
+if (!File.prototype.arrayBuffer) {
+  Object.defineProperty(File.prototype, 'arrayBuffer', {
+    value: async function () {
+      return new Promise<ArrayBuffer>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as ArrayBuffer)
+        reader.onerror = () => reject(reader.error)
+        reader.readAsArrayBuffer(this)
+      })
+    },
+  })
+}
+
 // Mock URL.createObjectURL for jsdom
 const urlObjectMap = new Map<string, Blob>()
 if (!URL.createObjectURL) {
