@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { parseZonesCsv, parseMaterialsCsv } from '../../domain/csv'
+import { parseZonesCsv, parseMaterialsCsv, parseExpectedQuantitiesCsv } from '../../domain/csv'
 import { createZone, listZones } from '../../db/repositories/zoneRepository'
-import { createMaterial } from '../../db/repositories/materialRepository'
+import { createMaterial, listMaterials } from '../../db/repositories/materialRepository'
 import { listUnits } from '../../db/repositories/unitRepository'
+import { setExpectedQuantity } from '../../db/repositories/expectedQuantityRepository'
 
 async function readFileText(file: File): Promise<string> {
   return file.text()
@@ -43,6 +44,29 @@ export default function ImportPage() {
     setStatus(`Imported ${created} material(s).${skipped.length ? ` Skipped: ${skipped.join(', ')}` : ''}`)
   }
 
+  const importExpectedQuantities = async (file: File) => {
+    const rows = parseExpectedQuantitiesCsv(await readFileText(file))
+    const zones = await listZones()
+    const materials = await listMaterials()
+    const zoneByName = new Map(zones.map((z) => [z.name, z.id]))
+    const materialByName = new Map(materials.map((m) => [m.name, m.id]))
+    let created = 0
+    const skipped: string[] = []
+    for (const row of rows) {
+      const zoneId = zoneByName.get(row.zoneName)
+      const materialId = materialByName.get(row.materialName)
+      if (!zoneId || !materialId) {
+        skipped.push(`${row.zoneName} / ${row.materialName} (unknown zone or material)`)
+        continue
+      }
+      await setExpectedQuantity(zoneId, materialId, row.expectedQuantity)
+      created++
+    }
+    setStatus(
+      `Imported ${created} expected quantit${created === 1 ? 'y' : 'ies'}.${skipped.length ? ` Skipped: ${skipped.join(', ')}` : ''}`,
+    )
+  }
+
   return (
     <div className="screen">
       <h1>Import from CSV</h1>
@@ -67,6 +91,19 @@ export default function ImportPage() {
           onChange={(e) => {
             const file = e.target.files?.[0]
             if (file) importMaterials(file)
+          }}
+        />
+      </div>
+      <div className="form-row">
+        <label htmlFor="import-expected-quantities">Expected quantities CSV (zoneName,materialName,expectedQuantity)</label>
+        <input
+          id="import-expected-quantities"
+          aria-label="Expected quantities CSV"
+          type="file"
+          accept=".csv"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) importExpectedQuantities(file)
           }}
         />
       </div>
