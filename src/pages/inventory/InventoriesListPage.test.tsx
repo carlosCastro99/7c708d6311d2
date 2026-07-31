@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { db } from '../../db/schema'
 import { CountingSessionProvider } from '../../context/CountingSession'
 import { startInventory, getOrOpenZoneCount, setCountLine, closeZoneCount, closePass } from '../../db/repositories/inventoryRepository'
@@ -44,5 +44,51 @@ describe('InventoriesListPage', () => {
       'href',
       `/inventory/${closedInv.id}/export`,
     )
+  })
+
+  it('filters to only in-progress inventories when linked with ?status=in_progress', async () => {
+    await startInventory('Open Inventory', 'user-1')
+    const { inventory: closedInv, pass } = await startInventory('Closed Inventory', 'user-1')
+    const zc = await getOrOpenZoneCount(pass.id, 'zone-1', 'user-1')
+    await setCountLine(zc.id, 'material-1', 5, 'user-1')
+    await closeZoneCount(zc.id, 'user-1')
+    await closePass(pass.id, 'user-1')
+    await db.inventories.put({ ...(await db.inventories.get(closedInv.id))!, status: 'closed_single_pass' })
+
+    render(
+      <CountingSessionProvider>
+        <MemoryRouter initialEntries={['/inventories?status=in_progress']}>
+          <Routes>
+            <Route path="/inventories" element={<InventoriesListPage />} />
+          </Routes>
+        </MemoryRouter>
+      </CountingSessionProvider>,
+    )
+
+    expect(await screen.findByText('Open Inventory')).toBeInTheDocument()
+    expect(screen.queryByText('Closed Inventory')).not.toBeInTheDocument()
+  })
+
+  it('filters to only completed inventories when linked with ?status=completed', async () => {
+    await startInventory('Open Inventory', 'user-1')
+    const { inventory: closedInv, pass } = await startInventory('Closed Inventory', 'user-1')
+    const zc = await getOrOpenZoneCount(pass.id, 'zone-1', 'user-1')
+    await setCountLine(zc.id, 'material-1', 5, 'user-1')
+    await closeZoneCount(zc.id, 'user-1')
+    await closePass(pass.id, 'user-1')
+    await db.inventories.put({ ...(await db.inventories.get(closedInv.id))!, status: 'closed_single_pass' })
+
+    render(
+      <CountingSessionProvider>
+        <MemoryRouter initialEntries={['/inventories?status=completed']}>
+          <Routes>
+            <Route path="/inventories" element={<InventoriesListPage />} />
+          </Routes>
+        </MemoryRouter>
+      </CountingSessionProvider>,
+    )
+
+    expect(await screen.findByText('Closed Inventory')).toBeInTheDocument()
+    expect(screen.queryByText('Open Inventory')).not.toBeInTheDocument()
   })
 })

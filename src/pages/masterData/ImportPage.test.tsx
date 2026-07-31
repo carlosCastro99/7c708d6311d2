@@ -68,4 +68,20 @@ describe('ImportPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/dexie write failed/i)
     spy.mockRestore()
   })
+
+  it('offers a downloadable template for each import type, in the right format', () => {
+    render(<ImportPage />)
+
+    const templateLinks = screen.getAllByRole('link', { name: /download template/i })
+    expect(templateLinks).toHaveLength(3)
+
+    const zonesTemplate = decodeURIComponent(templateLinks[0].getAttribute('href')!.replace('data:text/csv;charset=utf-8,', ''))
+    expect(zonesTemplate).toContain('name,sapStorageLocation')
+
+    const materialsTemplate = decodeURIComponent(templateLinks[1].getAttribute('href')!.replace('data:text/csv;charset=utf-8,', ''))
+    expect(materialsTemplate).toContain('name,unitCode,sapMaterialNumber')
+
+    const expectedQuantitiesTemplate = decodeURIComponent(templateLinks[2].getAttribute('href')!.replace('data:text/csv;charset=utf-8,', ''))
+    expect(expectedQuantitiesTemplate).toContain('zoneName,materialName,expectedQuantity')
+  })
 })

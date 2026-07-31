@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { db } from '../../db/schema'
 import { useCountingSession } from '../../context/CountingSession'
 import type { Inventory, InventoryPass } from '../../db/types'
 
+const IN_PROGRESS_STATUSES = ['in_progress', 'needs_3rd_pass']
+const COMPLETED_STATUSES = ['closed_single_pass', 'successful']
+
 export default function InventoriesListPage() {
   const { setSession } = useCountingSession()
   const [rows, setRows] = useState<Array<{ inventory: Inventory; currentPass: InventoryPass | undefined }>>([])
+  const [searchParams] = useSearchParams()
+  const statusFilter = searchParams.get('status')
 
   useEffect(() => {
     (async () => {
@@ -22,11 +27,26 @@ export default function InventoriesListPage() {
     })()
   }, [])
 
+  const filteredRows = rows.filter(({ inventory }) => {
+    if (statusFilter === 'in_progress') return IN_PROGRESS_STATUSES.includes(inventory.status)
+    if (statusFilter === 'completed') return COMPLETED_STATUSES.includes(inventory.status)
+    return true
+  })
+
+  const heading = statusFilter === 'in_progress'
+    ? 'Inventories — In Progress'
+    : statusFilter === 'completed'
+      ? 'Inventories — Completed'
+      : 'Inventories'
+
   return (
     <div className="screen">
-      <h1>Inventories</h1>
+      <h1>{heading}</h1>
+      {statusFilter && (
+        <Link to="/inventories" className="link-button">Show all</Link>
+      )}
       <ul>
-        {rows.map(({ inventory, currentPass }) => (
+        {filteredRows.map(({ inventory, currentPass }) => (
           <li key={inventory.id} className="list-item">
             <span>{inventory.name}</span> <span>({inventory.status})</span>
             {(inventory.status === 'in_progress' || inventory.status === 'needs_3rd_pass') && currentPass && (

@@ -372,6 +372,11 @@ tbody tr + tr td {
   text-align: center;
 }
 
+.kpi-tile:active {
+  transform: scale(0.98);
+  opacity: 0.85;
+}
+
 .kpi-value {
   font-size: 32px;
   font-weight: 700;

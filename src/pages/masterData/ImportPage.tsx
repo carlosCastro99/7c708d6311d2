@@ -11,6 +11,16 @@ async function readFileText(file: File): Promise<string> {
   return file.text()
 }
 
+// Small, static example files -- built as data: URIs so no Blob/object-URL
+// lifecycle management is needed, unlike the dynamic exports on ExportPage.
+function templateHref(csv: string): string {
+  return `data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`
+}
+
+const ZONES_TEMPLATE = 'name,sapStorageLocation\nWarehouse A,SL01\n'
+const MATERIALS_TEMPLATE = 'name,unitCode,sapMaterialNumber\nKraft Paper,KG,1000123\n'
+const EXPECTED_QUANTITIES_TEMPLATE = 'zoneName,materialName,expectedQuantity\nWarehouse A,Kraft Paper,150\n'
+
 export default function ImportPage() {
   const [status, setStatus] = useState('')
 
@@ -86,6 +96,9 @@ export default function ImportPage() {
             if (file) importZones(file)
           }}
         />
+        <a href={templateHref(ZONES_TEMPLATE)} download="zones-template.csv" className="link-button">
+          Download template
+        </a>
       </div>
       <div className="form-row">
         <label htmlFor="import-materials">Materials CSV (name,unitCode,sapMaterialNumber)</label>
@@ -98,6 +111,9 @@ export default function ImportPage() {
             if (file) importMaterials(file)
           }}
         />
+        <a href={templateHref(MATERIALS_TEMPLATE)} download="materials-template.csv" className="link-button">
+          Download template
+        </a>
       </div>
       <div className="form-row">
         <label htmlFor="import-expected-quantities">Expected quantities CSV (zoneName,materialName,expectedQuantity)</label>
@@ -111,6 +127,9 @@ export default function ImportPage() {
             if (file) importExpectedQuantities(file)
           }}
         />
+        <a href={templateHref(EXPECTED_QUANTITIES_TEMPLATE)} download="expected-quantities-template.csv" className="link-button">
+          Download template
+        </a>
       </div>
       {status && <p>{status}</p>}
     </div>

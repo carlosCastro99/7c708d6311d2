@@ -30,22 +30,22 @@ export default function HomePage() {
       <h1>MX Inventory</h1>
 
       <div className="kpi-grid">
-        <div className="kpi-tile">
+        <Link to="/inventories?status=in_progress" className="kpi-tile">
           <div className="kpi-value">{kpis?.inProgress ?? '—'}</div>
           <div className="kpi-label">In progress</div>
-        </div>
-        <div className="kpi-tile">
+        </Link>
+        <Link to="/inventories?status=completed" className="kpi-tile">
           <div className="kpi-value">{kpis?.completed ?? '—'}</div>
           <div className="kpi-label">Completed</div>
-        </div>
-        <div className="kpi-tile">
+        </Link>
+        <Link to="/master-data/zones" className="kpi-tile">
           <div className="kpi-value">{kpis?.zones ?? '—'}</div>
           <div className="kpi-label">Zones</div>
-        </div>
-        <div className="kpi-tile">
+        </Link>
+        <Link to="/master-data/materials" className="kpi-tile">
           <div className="kpi-value">{kpis?.materials ?? '—'}</div>
           <div className="kpi-label">Materials</div>
-        </div>
+        </Link>
       </div>
 
       <Link to="/inventory/new" className="primary-cta">+ New Inventory</Link>
