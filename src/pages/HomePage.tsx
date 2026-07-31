@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { db } from '../db/schema'
+import Logo from '../components/Logo'
+import PaperRollsDecoration from '../components/PaperRollsDecoration'
 
 interface Kpis {
   inProgress: number
@@ -26,8 +28,12 @@ export default function HomePage() {
   }, [])
 
   return (
-    <div className="screen">
-      <h1>MX Inventory</h1>
+    <div className="screen home-screen">
+      <PaperRollsDecoration />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--md-space-1)', color: 'var(--md-primary)' }}>
+        <Logo size={32} />
+        <h1 style={{ margin: 0, color: 'var(--md-on-surface)' }}>MX Inventory</h1>
+      </div>
 
       <div className="kpi-grid">
         <Link to="/inventories?status=in_progress" className="kpi-tile">

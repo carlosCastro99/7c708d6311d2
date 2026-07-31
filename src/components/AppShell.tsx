@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import Logo from './Logo'
 
 interface AppShellProps {
   children: ReactNode
@@ -40,13 +41,17 @@ export default function AppShell({ children }: AppShellProps) {
             ‹
           </button>
         )}
+        <Logo />
         <span className="app-bar-title">MX Inventory</span>
       </header>
 
       {drawerOpen && (
         <div className="drawer-overlay" onClick={() => setDrawerOpen(false)}>
           <nav className="drawer" onClick={(e) => e.stopPropagation()}>
-            <div className="drawer-header">MX Inventory</div>
+            <div className="drawer-header">
+              <Logo size={24} />
+              <span>MX Inventory</span>
+            </div>
             <ul className="nav-list">
               {NAV_LINKS.map((link) => (
                 <li key={link.to}>

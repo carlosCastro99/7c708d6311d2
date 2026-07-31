@@ -119,6 +119,9 @@ body {
 }
 
 .drawer-header {
+  display: flex;
+  align-items: center;
+  gap: var(--md-space-1);
   font-size: 17px;
   font-weight: 600;
   color: var(--md-primary);
@@ -468,4 +471,19 @@ tbody tr + tr td {
 .quantity-counted {
   font-weight: 600;
   color: var(--md-on-surface);
+}
+
+.home-screen {
+  background-color: var(--md-background);
+  background-image: radial-gradient(circle, rgba(11, 87, 208, 0.07) 1.5px, transparent 1.5px);
+  background-size: 22px 22px;
+}
+
+.paper-rolls-decoration {
+  position: fixed;
+  right: -14px;
+  bottom: -6px;
+  opacity: 0.3;
+  pointer-events: none;
+  z-index: 1;
 }
