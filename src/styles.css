@@ -490,11 +490,16 @@ tbody tr + tr td {
   background-size: 22px 22px;
 }
 
-.paper-rolls-decoration {
+.warehouse-photo-decoration {
   position: fixed;
-  right: -14px;
-  bottom: -6px;
-  opacity: 0.3;
+  right: 0;
+  bottom: 0;
+  width: 170px;
+  height: 190px;
+  object-fit: cover;
+  opacity: 0.5;
   pointer-events: none;
   z-index: 1;
+  -webkit-mask-image: radial-gradient(ellipse 100% 100% at 100% 100%, black 0%, black 30%, transparent 75%);
+  mask-image: radial-gradient(ellipse 100% 100% at 100% 100%, black 0%, black 30%, transparent 75%);
 }
