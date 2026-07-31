@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getPassLines, closeInventory, startNextPass } from '../../db/repositories/inventoryRepository'
+import { getPassLines, closePass, closeInventory, startNextPass } from '../../db/repositories/inventoryRepository'
 import { comparePasses } from '../../domain/reconciliation'
 import type { CountLineSnapshot } from '../../domain/reconciliation'
 import { db } from '../../db/schema'
@@ -10,6 +10,7 @@ interface VarianceReportPageProps {
   inventoryId: string
   pass1Id: string
   pass2Id: string
+  userId: string
   onResolved: (outcome: 'successful' | 'needs_3rd_pass', pass3Id?: string) => void
 }
 
@@ -22,7 +23,7 @@ interface MismatchDisplay {
   passBQuantity: number
 }
 
-export default function VarianceReportPage({ inventoryId, pass1Id, pass2Id, onResolved }: VarianceReportPageProps) {
+export default function VarianceReportPage({ inventoryId, pass1Id, pass2Id, userId, onResolved }: VarianceReportPageProps) {
   const [mismatched, setMismatched] = useState<MismatchDisplay[] | null>(null)
   const [loadError, setLoadError] = useState<Error | null>(null)
 
@@ -31,6 +32,15 @@ export default function VarianceReportPage({ inventoryId, pass1Id, pass2Id, onRe
 
     ;(async () => {
       try {
+        // This screen is reached right after the user finishes counting every
+        // zone in pass 2 -- nothing else in the app closes pass 2's own
+        // InventoryPass record, and closeInventory() below requires every
+        // pass to be closed first. Safe to call on every mount (including a
+        // resumed session that reaches this screen again): closePass is a
+        // no-op status write once the pass's zone counts are already closed.
+        await closePass(pass2Id, userId)
+        if (cancelled) return
+
         const pass1Lines: CountLineSnapshot[] = await getPassLines(pass1Id)
         const pass2Lines: CountLineSnapshot[] = await getPassLines(pass2Id)
         const { mismatched: diffs } = comparePasses(pass1Lines, pass2Lines)
@@ -63,7 +73,7 @@ export default function VarianceReportPage({ inventoryId, pass1Id, pass2Id, onRe
     return () => {
       cancelled = true
     }
-  }, [inventoryId, pass1Id, pass2Id, onResolved])
+  }, [inventoryId, pass1Id, pass2Id, userId, onResolved])
 
   const [startThirdPass, { pending, error: startError }] = useAsyncAction(async () => {
     const pass3 = await startNextPass(inventoryId, 3)

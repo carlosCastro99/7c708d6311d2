@@ -22,17 +22,21 @@ describe('VarianceReportPage', () => {
     await closePass(pass.id, 'user-1')
     const pass2 = await startNextPass(inventory.id, 2)
     await countAndClose(pass2.id, 'zone-1', 'material-1', 10)
-    await closePass(pass2.id, 'user-1')
 
+    // Pass 2 is deliberately left open here -- VarianceReportPage itself is
+    // responsible for closing it (nothing else in the real app does), so
+    // this proves that responsibility actually works end-to-end.
     const onResolved = vi.fn()
     render(
-      <VarianceReportPage inventoryId={inventory.id} pass1Id={pass.id} pass2Id={pass2.id} onResolved={onResolved} />,
+      <VarianceReportPage inventoryId={inventory.id} pass1Id={pass.id} pass2Id={pass2.id} userId="user-1" onResolved={onResolved} />,
     )
 
     expect(await screen.findByText(/successful/i)).toBeInTheDocument()
     expect(onResolved).toHaveBeenCalledWith('successful')
     const updated = await db.inventories.get(inventory.id)
     expect(updated?.status).toBe('successful')
+    const updatedPass2 = await db.passes.get(pass2.id)
+    expect(updatedPass2?.status).toBe('closed')
   })
 
   it('lists mismatches and starts a third pass', async () => {
@@ -41,12 +45,11 @@ describe('VarianceReportPage', () => {
     await closePass(pass.id, 'user-1')
     const pass2 = await startNextPass(inventory.id, 2)
     await countAndClose(pass2.id, 'zone-1', 'material-1', 12)
-    await closePass(pass2.id, 'user-1')
 
     const onResolved = vi.fn()
     const user = userEvent.setup()
     render(
-      <VarianceReportPage inventoryId={inventory.id} pass1Id={pass.id} pass2Id={pass2.id} onResolved={onResolved} />,
+      <VarianceReportPage inventoryId={inventory.id} pass1Id={pass.id} pass2Id={pass2.id} userId="user-1" onResolved={onResolved} />,
     )
 
     expect(await screen.findByText(/10/)).toBeInTheDocument()

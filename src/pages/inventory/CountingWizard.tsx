@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useCountingSession } from '../../context/CountingSession'
 import { getOrOpenZoneCount, getPassLines } from '../../db/repositories/inventoryRepository'
 import { getExpectedQuantity } from '../../db/repositories/expectedQuantityRepository'
@@ -21,14 +22,36 @@ export default function CountingWizard() {
   const [zoneCountId, setZoneCountId] = useState<string | null>(null)
   const [initialQuantity, setInitialQuantity] = useState(0)
   const [expectedQuantity, setExpectedQuantity] = useState<number | undefined>(undefined)
-  // pass1Id is captured once, when the wizard first mounts with a valid session
-  // (always true in real usage -- StartInventoryRoute / InventoriesListPage
-  // write the session before navigating here). It stays fixed across the
-  // pass1 -> pass2 -> pass3 transitions that happen within this same mount.
-  const [pass1Id] = useState<string | null>(() => session?.passId ?? null)
+  const [pass1Id, setPass1Id] = useState<string | null>(null)
   const [pass2Id, setPass2Id] = useState<string | null>(null)
   const [pass3Id, setPass3Id] = useState<string | null>(null)
+  const [passesLoaded, setPassesLoaded] = useState(false)
   const [mismatchedPairs, setMismatchedPairs] = useState<Array<{ zoneId: string; materialId: string }>>([])
+  // Set once a completion path fires, alongside clearing the session -- if we
+  // relied on `!session` alone to detect "done," the completion message would
+  // never actually be visible: clearing the session and the child page's own
+  // "done" render happen in the same tick, and the `!session` early return
+  // below would win, replacing the message with the generic "no active
+  // session" fallback before the user ever saw it.
+  const [finished, setFinished] = useState<'closed_single_pass' | 'successful' | 'resolved' | null>(null)
+
+  // Reconstruct which of this inventory's real InventoryPass rows is 1/2/3
+  // from Dexie on mount, rather than trusting transient component state. The
+  // wizard can mount fresh at any pass -- e.g. via "Resume" from the
+  // Inventories list, which points the session at whichever pass is
+  // currently furthest along -- so there is no guarantee session.passId is
+  // pass 1. Same-mount transitions (starting pass 2 or pass 3 while this
+  // component stays mounted) still update this state directly below.
+  useEffect(() => {
+    if (!session) return
+    ;(async () => {
+      const passes = await db.passes.where('inventoryId').equals(session.inventoryId).toArray()
+      setPass1Id(passes.find((p) => p.passNumber === 1)?.id ?? null)
+      setPass2Id(passes.find((p) => p.passNumber === 2)?.id ?? null)
+      setPass3Id(passes.find((p) => p.passNumber === 3)?.id ?? null)
+      setPassesLoaded(true)
+    })()
+  }, [session?.inventoryId])
 
   // Compute the scoped third-pass mismatch list once pass 3 starts -- this is
   // what ThirdPassPickerPage's `mismatches` prop needs, and nothing else in
@@ -43,7 +66,23 @@ export default function CountingWizard() {
     })()
   }, [pass1Id, pass2Id, pass3Id])
 
+  if (finished) {
+    const { heading, message } = {
+      closed_single_pass: { heading: 'Inventory Complete', message: 'Inventory finished with a single pass.' },
+      successful: { heading: 'Inventory Successful', message: 'Both passes matched on every zone and material.' },
+      resolved: { heading: 'Inventory Complete', message: 'All mismatches have been resolved.' },
+    }[finished]
+    return (
+      <div className="screen">
+        <h1>{heading}</h1>
+        <p>{message}</p>
+        <Link to="/inventories">Back to Inventories</Link>
+      </div>
+    )
+  }
+
   if (!session) return <div className="screen">No active session — go to Inventories to resume.</div>
+  if (!passesLoaded) return <div className="screen">Loading…</div>
 
   const { userId, inventoryId } = session
   const passId = session.passId
@@ -138,8 +177,10 @@ export default function CountingWizard() {
         inventoryId={inventoryId}
         pass1Id={pass1Id!}
         pass2Id={pass2Id}
+        userId={userId}
         onResolved={(outcome, newPass3Id) => {
           if (outcome === 'successful') {
+            setFinished('successful')
             setSession(null)
           } else if (newPass3Id) {
             setPass3Id(newPass3Id)
@@ -159,7 +200,10 @@ export default function CountingWizard() {
         pass2Id={pass2Id!}
         pass3Id={pass3Id!}
         userId={userId}
-        onResolved={() => setSession(null)}
+        onResolved={() => {
+          setFinished('resolved')
+          setSession(null)
+        }}
       />
     )
   }
@@ -169,7 +213,10 @@ export default function CountingWizard() {
       passId={passId}
       inventoryId={inventoryId}
       userId={userId}
-      onFinishedSinglePass={() => setSession(null)}
+      onFinishedSinglePass={() => {
+        setFinished('closed_single_pass')
+        setSession(null)
+      }}
       onSecondPassStarted={(newPass2Id) => {
         setPass2Id(newPass2Id)
         setSession({ ...session, passId: newPass2Id, zoneId: undefined, materialId: undefined })
