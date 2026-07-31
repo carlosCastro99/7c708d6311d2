@@ -1,17 +1,54 @@
 :root {
   color-scheme: light;
   font-family: system-ui, sans-serif;
-  font-size: 18px;
+  font-size: 16px;
+
+  /* Color tokens (Material 3-inspired, Blue direction) */
+  --md-primary: #0b57d0;
+  --md-on-primary: #ffffff;
+  --md-primary-container: #e5edfc;
+  --md-on-primary-container: #0b57d0;
+  --md-surface: #ffffff;
+  --md-background: #f7f9fe;
+  --md-on-surface: #1b1b1f;
+  --md-on-surface-variant: #44474e;
+  --md-outline: #c4c6cf;
+  --md-error: #b3261e;
+
+  /* Spacing scale */
+  --md-space-1: 8px;
+  --md-space-2: 12px;
+  --md-space-3: 16px;
+  --md-space-4: 24px;
+
+  /* Shape */
+  --md-radius-sm: 8px;
+  --md-radius-md: 12px;
+  --md-radius-full: 24px;
+
+  /* Elevation */
+  --md-elevation-1: 0 1px 3px rgba(0, 0, 0, 0.12);
+  --md-elevation-2: 0 2px 6px rgba(0, 0, 0, 0.16);
 }
 
 * { box-sizing: border-box; }
 
-body { margin: 0; }
+body {
+  margin: 0;
+  color: var(--md-on-surface);
+}
+
+h1 {
+  font-size: 22px;
+  font-weight: 600;
+}
 
 .screen {
   max-width: 480px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: var(--md-space-4);
+  background: var(--md-background);
+  min-height: 100vh;
 }
 
 button, .tap-target, input, select {
@@ -20,21 +57,43 @@ button, .tap-target, input, select {
   padding: 0.5rem 0.75rem;
 }
 
-button {
+button, .tap-target {
   border: none;
-  border-radius: 8px;
-  background: #1a73e8;
-  color: white;
+  border-radius: var(--md-radius-md);
+  background: var(--md-primary);
+  color: var(--md-on-primary);
   cursor: pointer;
+  box-shadow: var(--md-elevation-2);
+  transition: transform 0.1s ease, opacity 0.1s ease;
+}
+
+button:active, .tap-target:active {
+  transform: scale(0.98);
+  opacity: 0.85;
 }
 
 button.secondary {
-  background: #e8eaed;
-  color: #202124;
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  box-shadow: var(--md-elevation-1);
 }
 
 button.danger {
-  background: #d93025;
+  background: var(--md-error);
+  color: white;
+}
+
+input, select {
+  background: var(--md-surface);
+  color: var(--md-on-surface);
+  border: 1px solid var(--md-outline);
+  border-radius: var(--md-radius-sm);
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--md-primary);
+  box-shadow: 0 0 0 3px rgba(11, 87, 208, 0.15);
 }
 
 .list-item {
@@ -42,18 +101,27 @@ button.danger {
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem;
-  border-bottom: 1px solid #ddd;
   min-height: 44px;
+  background: var(--md-surface);
+  border-radius: var(--md-radius-md);
+  box-shadow: var(--md-elevation-1);
+  margin-bottom: var(--md-space-1);
 }
 
 .form-row {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  margin-bottom: 1rem;
+  gap: var(--md-space-1);
+  margin-bottom: var(--md-space-3);
+}
+
+.form-row label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--md-on-surface-variant);
 }
 
 .variance-warning {
-  color: #d93025;
+  color: var(--md-error);
   font-weight: bold;
 }
