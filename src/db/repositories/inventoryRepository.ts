@@ -134,7 +134,7 @@ export async function startNextPass(inventoryId: string, passNumber: 2 | 3): Pro
 
 export async function closeInventory(
   inventoryId: string,
-  status: Extract<InventoryStatus, 'closed_single_pass' | 'successful'>,
+  status: Extract<InventoryStatus, 'closed_single_pass' | 'successful' | 'needs_3rd_pass'>,
 ): Promise<void> {
   const inventory = await db.inventories.get(inventoryId)
   if (!inventory) throw new Error('Inventory not found')

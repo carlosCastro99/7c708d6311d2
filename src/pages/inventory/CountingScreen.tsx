@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { setCountLine } from '../../db/repositories/inventoryRepository'
 import { savePhoto } from '../../db/repositories/photoRepository'
+import { useAsyncAction } from '../../hooks/useAsyncAction'
+import ErrorBanner from '../../components/ErrorBanner'
 import TapCounter from '../../components/TapCounter'
 import PhotoCapture from '../../components/PhotoCapture'
 
@@ -19,9 +21,16 @@ export default function CountingScreen({
   const [quantity, setQuantity] = useState(initialQuantity)
   const [photoBlob, setPhotoBlob] = useState<Blob | null>(null)
 
+  const [save, { pending, error }] = useAsyncAction(async () => {
+    const photoBlobId = photoBlob ? await savePhoto(photoBlob) : undefined
+    await setCountLine(zoneCountId, materialId, quantity, userId, expectedQuantity, photoBlobId)
+    onSaved()
+  })
+
   return (
     <div className="screen">
       <h1>Count</h1>
+      {error && <ErrorBanner message={error.message} />}
       {expectedQuantity !== undefined && (
         <p>
           Expected: {expectedQuantity}{' '}
@@ -32,14 +41,7 @@ export default function CountingScreen({
       )}
       <TapCounter value={quantity} onChange={setQuantity} />
       <PhotoCapture onCapture={setPhotoBlob} />
-      <button
-        type="button"
-        onClick={async () => {
-          const photoBlobId = photoBlob ? await savePhoto(photoBlob) : undefined
-          await setCountLine(zoneCountId, materialId, quantity, userId, expectedQuantity, photoBlobId)
-          onSaved()
-        }}
-      >
+      <button type="button" disabled={pending} onClick={() => save()}>
         Save count
       </button>
     </div>

@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import { getPassLines, closeInventory, startNextPass } from '../../db/repositories/inventoryRepository'
 import { comparePasses } from '../../domain/reconciliation'
 import type { CountLineSnapshot } from '../../domain/reconciliation'
+import { db } from '../../db/schema'
+import { useAsyncAction } from '../../hooks/useAsyncAction'
+import ErrorBanner from '../../components/ErrorBanner'
 
 interface VarianceReportPageProps {
   inventoryId: string
@@ -10,28 +13,50 @@ interface VarianceReportPageProps {
   onResolved: (outcome: 'successful' | 'needs_3rd_pass', pass3Id?: string) => void
 }
 
+interface MismatchDisplay {
+  zoneId: string
+  materialId: string
+  zoneName: string
+  materialName: string
+  passAQuantity: number
+  passBQuantity: number
+}
+
 export default function VarianceReportPage({ inventoryId, pass1Id, pass2Id, onResolved }: VarianceReportPageProps) {
-  const [mismatched, setMismatched] = useState<
-    Array<{ zoneId: string; materialId: string; passAQuantity: number; passBQuantity: number }> | null
-  >(null)
+  const [mismatched, setMismatched] = useState<MismatchDisplay[] | null>(null)
+  const [loadError, setLoadError] = useState<Error | null>(null)
 
   useEffect(() => {
     let cancelled = false
 
     ;(async () => {
-      const pass1Lines: CountLineSnapshot[] = await getPassLines(pass1Id)
-      const pass2Lines: CountLineSnapshot[] = await getPassLines(pass2Id)
-      const { mismatched: diffs } = comparePasses(pass1Lines, pass2Lines)
+      try {
+        const pass1Lines: CountLineSnapshot[] = await getPassLines(pass1Id)
+        const pass2Lines: CountLineSnapshot[] = await getPassLines(pass2Id)
+        const { mismatched: diffs } = comparePasses(pass1Lines, pass2Lines)
 
-      if (cancelled) return
-
-      if (diffs.length === 0) {
-        await closeInventory(inventoryId, 'successful')
         if (cancelled) return
-        setMismatched([])
-        onResolved('successful')
-      } else {
-        setMismatched(diffs)
+
+        if (diffs.length === 0) {
+          await closeInventory(inventoryId, 'successful')
+          if (cancelled) return
+          setMismatched([])
+          onResolved('successful')
+        } else {
+          await closeInventory(inventoryId, 'needs_3rd_pass')
+          if (cancelled) return
+          const withNames = await Promise.all(
+            diffs.map(async (d) => {
+              const zone = await db.zones.get(d.zoneId)
+              const material = await db.materials.get(d.materialId)
+              return { ...d, zoneName: zone?.name ?? d.zoneId, materialName: material?.name ?? d.materialId }
+            }),
+          )
+          if (cancelled) return
+          setMismatched(withNames)
+        }
+      } catch (err) {
+        if (!cancelled) setLoadError(err instanceof Error ? err : new Error(String(err)))
       }
     })()
 
@@ -39,6 +64,21 @@ export default function VarianceReportPage({ inventoryId, pass1Id, pass2Id, onRe
       cancelled = true
     }
   }, [inventoryId, pass1Id, pass2Id, onResolved])
+
+  const [startThirdPass, { pending, error: startError }] = useAsyncAction(async () => {
+    const pass3 = await startNextPass(inventoryId, 3)
+    onResolved('needs_3rd_pass', pass3.id)
+  })
+
+  const error = loadError ?? startError
+
+  if (error && mismatched === null) {
+    return (
+      <div className="screen">
+        <ErrorBanner message={error.message} />
+      </div>
+    )
+  }
 
   if (mismatched === null) return <div className="screen">Comparing passes…</div>
 
@@ -54,20 +94,15 @@ export default function VarianceReportPage({ inventoryId, pass1Id, pass2Id, onRe
   return (
     <div className="screen">
       <h1>Pass 1 vs Pass 2 Mismatches</h1>
+      {error && <ErrorBanner message={error.message} />}
       <ul>
         {mismatched.map((m) => (
           <li key={`${m.zoneId}-${m.materialId}`} className="list-item">
-            Zone {m.zoneId} / Material {m.materialId}: {m.passAQuantity} vs {m.passBQuantity}
+            Zone {m.zoneName} / Material {m.materialName}: {m.passAQuantity} vs {m.passBQuantity}
           </li>
         ))}
       </ul>
-      <button
-        type="button"
-        onClick={async () => {
-          const pass3 = await startNextPass(inventoryId, 3)
-          onResolved('needs_3rd_pass', pass3.id)
-        }}
-      >
+      <button type="button" disabled={pending} onClick={() => startThirdPass()}>
         Start third pass
       </button>
     </div>

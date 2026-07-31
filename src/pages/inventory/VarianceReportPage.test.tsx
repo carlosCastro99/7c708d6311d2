@@ -52,6 +52,9 @@ describe('VarianceReportPage', () => {
     expect(await screen.findByText(/10/)).toBeInTheDocument()
     expect(screen.getByText(/12/)).toBeInTheDocument()
 
+    const updatedInventory = await db.inventories.get(inventory.id)
+    expect(updatedInventory?.status).toBe('needs_3rd_pass')
+
     await user.click(screen.getByRole('button', { name: /start third pass/i }))
     await waitFor(() => expect(onResolved).toHaveBeenCalledWith('needs_3rd_pass', expect.any(String)))
   })

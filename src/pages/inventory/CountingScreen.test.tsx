@@ -51,4 +51,24 @@ describe('CountingScreen', () => {
 
     expect(screen.getByText(/variance/i)).toHaveClass('variance-warning')
   })
+
+  it('shows an error banner if saving fails', async () => {
+    // No matching zoneCount exists in the DB, so setCountLine will throw "Zone count not found".
+    const onSaved = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <CountingScreen
+        zoneCountId="nonexistent-zc"
+        materialId="material-1"
+        userId="user-1"
+        initialQuantity={0}
+        onSaved={onSaved}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: /save/i }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/zone count not found/i)
+    expect(onSaved).not.toHaveBeenCalled()
+  })
 })
