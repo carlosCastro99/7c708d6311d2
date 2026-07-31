@@ -148,7 +148,25 @@ h1 {
   padding: var(--md-space-3);
   background: var(--md-background);
   flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
+}
+
+/* CountingWizard's zone-picker step stacks a small action-button screen on
+   top of ZonePickerPage's own full screen (scan + list). Without this, the
+   pair doesn't participate in .app-content's flex sizing correctly and the
+   zone list below the button can end up squeezed off-screen. */
+.stacked-screens {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.stacked-screens .screen-compact {
+  flex: 0 0 auto;
+  padding-bottom: 0;
+  overflow: visible;
 }
 
 button, .tap-target, input, select {

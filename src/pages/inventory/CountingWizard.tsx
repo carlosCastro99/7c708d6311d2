@@ -90,8 +90,8 @@ export default function CountingWizard() {
 
   if (step === 'zone-picker') {
     return (
-      <div>
-        <div className="screen" style={{ paddingBottom: 0 }}>
+      <div className="stacked-screens">
+        <div className="screen screen-compact">
           <button
             type="button"
             className="secondary"
