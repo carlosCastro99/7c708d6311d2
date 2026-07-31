@@ -142,7 +142,7 @@ export default function ExportPage({ inventoryId }: ExportPageProps) {
                 <tr key={`${row.zoneName}-${row.materialName}`}>
                   <td>{row.zoneName}</td>
                   <td>{row.materialName}</td>
-                  <td>{row.officialQuantity}</td>
+                  <td className={row.officialQuantity === 0 ? 'quantity-zero' : 'quantity-counted'}>{row.officialQuantity}</td>
                   <td>{row.expectedQuantity ?? '—'}</td>
                   <td className={row.variance ? 'variance-warning' : undefined}>
                     {row.variance ?? '—'}

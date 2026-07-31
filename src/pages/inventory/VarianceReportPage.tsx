@@ -95,15 +95,26 @@ export default function VarianceReportPage({ inventoryId, pass1Id, pass2Id, user
   if (mismatched.length === 0) {
     return (
       <div className="screen">
-        <h1>Inventory Successful</h1>
-        <p>Both passes matched on every zone and material.</p>
+        <div className="status-banner status-success">
+          <span className="status-icon" aria-hidden="true">✓</span>
+          <div>
+            <h1>Inventory Successful</h1>
+            <p>Both passes matched on every zone and material.</p>
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="screen">
-      <h1>Pass 1 vs Pass 2 Mismatches</h1>
+      <div className="status-banner status-warning">
+        <span className="status-icon" aria-hidden="true">⚠</span>
+        <div>
+          <h1>Pass 1 vs Pass 2 Mismatches</h1>
+          <p>{mismatched.length} {mismatched.length === 1 ? 'item needs' : 'items need'} a third pass to resolve.</p>
+        </div>
+      </div>
       {error && <ErrorBanner message={error.message} />}
       <ul>
         {mismatched.map((m) => (

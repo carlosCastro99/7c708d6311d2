@@ -40,7 +40,7 @@ export default function ZoneSummaryPage({ zoneCountId, userId, onClosed }: ZoneS
         {lines.map((l) => (
           <li key={l.id} className="list-item">
             <span>{l.materialName}{l.lotNumber ? ` (Lot ${l.lotNumber})` : ''}</span>
-            <span>{l.quantity}</span>
+            <span className={l.quantity === 0 ? 'quantity-zero' : 'quantity-counted'}>{l.quantity}</span>
           </li>
         ))}
       </ul>

@@ -16,6 +16,9 @@
   --md-error: #b3261e;
   --md-warning-container: #fdecc8;
   --md-on-warning-container: #7a4a00;
+  --md-success: #146c2e;
+  --md-success-container: #d7f0dc;
+  --md-on-success-container: #0f5223;
 
   /* Spacing scale */
   --md-space-1: 8px;
@@ -125,8 +128,12 @@ body {
 
 ul {
   list-style: none;
-  margin: 0;
+  margin: 0 0 var(--md-space-3);
   padding: 0;
+}
+
+p {
+  margin: 0 0 var(--md-space-3);
 }
 
 li + li {
@@ -141,6 +148,7 @@ a {
 h1 {
   font-size: 22px;
   font-weight: 600;
+  margin: 0 0 var(--md-space-2);
 }
 
 .screen {
@@ -347,4 +355,112 @@ tbody tr + tr td {
 .confirm-banner p {
   margin: 0 0 var(--md-space-2);
   font-weight: 500;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--md-space-2);
+  margin: var(--md-space-3) 0;
+}
+
+.kpi-tile {
+  background: var(--md-surface);
+  border-radius: var(--md-radius-md);
+  box-shadow: var(--md-elevation-1);
+  padding: var(--md-space-3) var(--md-space-2);
+  text-align: center;
+}
+
+.kpi-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--md-primary);
+  line-height: 1.1;
+}
+
+.kpi-label {
+  font-size: 13px;
+  color: var(--md-on-surface-variant);
+  margin-top: var(--md-space-1);
+}
+
+.primary-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  border-radius: var(--md-radius-full);
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+  font-size: 17px;
+  font-weight: 600;
+  box-shadow: var(--md-elevation-2);
+  margin-top: var(--md-space-2);
+}
+
+.primary-cta:active {
+  transform: scale(0.98);
+  opacity: 0.85;
+}
+
+.status-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--md-space-2);
+  border-radius: var(--md-radius-md);
+  padding: var(--md-space-3);
+  margin-bottom: var(--md-space-3);
+}
+
+.status-banner h1 {
+  margin: 0 0 var(--md-space-1);
+}
+
+.status-banner p {
+  margin: 0;
+}
+
+.status-icon {
+  font-size: 1.75rem;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+
+.status-success {
+  background: var(--md-success-container);
+  color: var(--md-on-success-container);
+}
+
+.status-success h1, .status-success .status-icon {
+  color: var(--md-success);
+}
+
+.status-warning {
+  background: var(--md-warning-container);
+  color: var(--md-on-warning-container);
+}
+
+.status-warning h1, .status-warning .status-icon {
+  color: var(--md-on-warning-container);
+}
+
+.counter-value {
+  font-size: 3rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--md-primary);
+}
+
+.counter-value-zero {
+  color: var(--md-on-surface-variant);
+}
+
+.quantity-zero {
+  color: var(--md-on-surface-variant);
+}
+
+.quantity-counted {
+  font-weight: 600;
+  color: var(--md-on-surface);
 }

@@ -16,7 +16,7 @@ export default function TapCounter({ value, onChange }: TapCounterProps) {
 
   return (
     <div className="form-row">
-      <div style={{ fontSize: '2.5rem', textAlign: 'center' }}>{value}</div>
+      <div className={`counter-value${value === 0 ? ' counter-value-zero' : ''}`}>{value}</div>
       <div style={{ display: 'flex', gap: '0.5rem' }}>
         <button
           type="button"

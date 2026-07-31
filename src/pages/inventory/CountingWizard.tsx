@@ -74,9 +74,14 @@ export default function CountingWizard() {
     }[finished]
     return (
       <div className="screen">
-        <h1>{heading}</h1>
-        <p>{message}</p>
-        <Link to="/inventories">Back to Inventories</Link>
+        <div className="status-banner status-success">
+          <span className="status-icon" aria-hidden="true">✓</span>
+          <div>
+            <h1>{heading}</h1>
+            <p>{message}</p>
+          </div>
+        </div>
+        <Link to="/inventories" className="link-button">Back to Inventories</Link>
       </div>
     )
   }
