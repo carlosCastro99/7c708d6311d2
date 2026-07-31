@@ -14,6 +14,8 @@
   --md-on-surface-variant: #44474e;
   --md-outline: #c4c6cf;
   --md-error: #b3261e;
+  --md-warning-container: #fdecc8;
+  --md-on-warning-container: #7a4a00;
 
   /* Spacing scale */
   --md-space-1: 8px;
@@ -332,4 +334,17 @@ tbody tr + tr td {
 .variance-warning {
   color: var(--md-error);
   font-weight: bold;
+}
+
+.confirm-banner {
+  background: var(--md-warning-container);
+  color: var(--md-on-warning-container);
+  border-radius: var(--md-radius-md);
+  padding: var(--md-space-2);
+  margin-top: var(--md-space-1);
+}
+
+.confirm-banner p {
+  margin: 0 0 var(--md-space-2);
+  font-weight: 500;
 }

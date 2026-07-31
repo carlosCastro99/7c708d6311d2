@@ -26,4 +26,33 @@ describe('TapCounter', () => {
 
     expect(onChange).toHaveBeenCalledWith(120)
   })
+
+  it('asks for confirmation before accepting an absurdly large manual entry', () => {
+    const onChange = vi.fn()
+    render(<TapCounter value={5} onChange={onChange} />)
+
+    const input = screen.getByLabelText(/quantity/i)
+    fireEvent.change(input, { target: { value: '150000' } })
+    fireEvent.blur(input)
+
+    expect(onChange).not.toHaveBeenCalled()
+    expect(screen.getByRole('alert')).toHaveTextContent(/150000/)
+
+    fireEvent.click(screen.getByRole('button', { name: /confirm 150000/i }))
+    expect(onChange).toHaveBeenCalledWith(150000)
+  })
+
+  it('asks for confirmation before accepting a negative manual entry, and drops it on cancel', () => {
+    const onChange = vi.fn()
+    render(<TapCounter value={5} onChange={onChange} />)
+
+    const input = screen.getByLabelText(/quantity/i)
+    fireEvent.change(input, { target: { value: '-3' } })
+    fireEvent.blur(input)
+
+    expect(onChange).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: /cancel/i }))
+    expect(onChange).not.toHaveBeenCalled()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
 })

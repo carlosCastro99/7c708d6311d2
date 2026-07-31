@@ -1,9 +1,19 @@
+import { useState } from 'react'
+
 interface TapCounterProps {
   value: number
   onChange: (next: number) => void
 }
 
+// Values outside this range are almost certainly a fat-finger typo (an
+// extra digit, a stray minus sign) rather than a real physical count, so
+// they get a confirm step instead of being silently accepted.
+const SUSPICIOUS_MIN = 0
+const SUSPICIOUS_MAX = 99999
+
 export default function TapCounter({ value, onChange }: TapCounterProps) {
+  const [pendingValue, setPendingValue] = useState<number | null>(null)
+
   return (
     <div className="form-row">
       <div style={{ fontSize: '2.5rem', textAlign: 'center' }}>{value}</div>
@@ -33,9 +43,37 @@ export default function TapCounter({ value, onChange }: TapCounterProps) {
         key={value}
         onBlur={(e) => {
           const next = Number(e.target.value)
-          if (!Number.isNaN(next)) onChange(next)
+          if (Number.isNaN(next)) return
+          if (next < SUSPICIOUS_MIN || next > SUSPICIOUS_MAX) {
+            setPendingValue(next)
+          } else {
+            onChange(next)
+          }
         }}
       />
+      {pendingValue !== null && (
+        <div role="alert" className="confirm-banner">
+          <p>{pendingValue} looks unusual for a physical count — sure that's right?</p>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              type="button"
+              onClick={() => {
+                onChange(pendingValue)
+                setPendingValue(null)
+              }}
+            >
+              Confirm {pendingValue}
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => setPendingValue(null)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
