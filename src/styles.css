@@ -33,9 +33,107 @@
 
 * { box-sizing: border-box; }
 
+html, body, #root {
+  height: 100%;
+}
+
 body {
   margin: 0;
   color: var(--md-on-surface);
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.app-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--md-space-2);
+  height: 52px;
+  padding: 0 var(--md-space-3);
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+  box-shadow: var(--md-elevation-2);
+}
+
+.app-bar-icon {
+  background: transparent;
+  box-shadow: none;
+  color: var(--md-on-primary);
+  font-size: 1.4rem;
+  line-height: 1;
+  min-height: 40px;
+  min-width: 40px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-bar-icon:active {
+  transform: none;
+  opacity: 0.7;
+}
+
+.app-bar-title {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.app-content {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 20;
+  display: flex;
+}
+
+.drawer {
+  width: 260px;
+  max-width: 80vw;
+  height: 100%;
+  background: var(--md-surface);
+  box-shadow: var(--md-elevation-2);
+  padding: var(--md-space-3);
+  overflow-y: auto;
+}
+
+.drawer-header {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--md-primary);
+  padding: var(--md-space-2) var(--md-space-1);
+  margin-bottom: var(--md-space-2);
+}
+
+ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+li + li {
+  margin-top: var(--md-space-1);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
 }
 
 h1 {
@@ -45,10 +143,12 @@ h1 {
 
 .screen {
   max-width: 480px;
+  width: 100%;
   margin: 0 auto;
-  padding: var(--md-space-4);
+  padding: var(--md-space-3);
   background: var(--md-background);
-  min-height: 100vh;
+  flex: 1 1 auto;
+  overflow-y: auto;
 }
 
 button, .tap-target, input, select {
@@ -105,7 +205,36 @@ input:focus, select:focus {
   background: var(--md-surface);
   border-radius: var(--md-radius-md);
   box-shadow: var(--md-elevation-1);
-  margin-bottom: var(--md-space-1);
+}
+
+.list-item a {
+  color: var(--md-primary);
+  font-weight: 500;
+}
+
+.nav-list li {
+  background: var(--md-surface);
+  border-radius: var(--md-radius-md);
+  box-shadow: var(--md-elevation-1);
+  overflow: hidden;
+}
+
+.nav-list a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  min-height: 44px;
+  color: var(--md-primary);
+  font-weight: 500;
+}
+
+.nav-list a::after {
+  content: '\203A';
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--md-primary);
+  margin-left: var(--md-space-1);
 }
 
 .form-row {

@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .worktrees/
+.superpowers/brainstorm/
 *.local
 *.tsbuildinfo
 vite.config.d.ts
