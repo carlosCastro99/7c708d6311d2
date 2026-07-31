@@ -4,6 +4,8 @@ import { createZone, listZones } from '../../db/repositories/zoneRepository'
 import { createMaterial, listMaterials } from '../../db/repositories/materialRepository'
 import { listUnits } from '../../db/repositories/unitRepository'
 import { setExpectedQuantity } from '../../db/repositories/expectedQuantityRepository'
+import { useAsyncAction } from '../../hooks/useAsyncAction'
+import ErrorBanner from '../../components/ErrorBanner'
 
 async function readFileText(file: File): Promise<string> {
   return file.text()
@@ -12,7 +14,7 @@ async function readFileText(file: File): Promise<string> {
 export default function ImportPage() {
   const [status, setStatus] = useState('')
 
-  const importZones = async (file: File) => {
+  const [importZones, importZonesState] = useAsyncAction(async (file: File) => {
     const rows = parseZonesCsv(await readFileText(file))
     const existing = await listZones()
     const existingNames = new Set(existing.map((z) => z.name))
@@ -24,9 +26,9 @@ export default function ImportPage() {
       created++
     }
     setStatus(`Imported ${created} zone(s).`)
-  }
+  })
 
-  const importMaterials = async (file: File) => {
+  const [importMaterials, importMaterialsState] = useAsyncAction(async (file: File) => {
     const rows = parseMaterialsCsv(await readFileText(file))
     const units = await listUnits()
     const unitByCode = new Map(units.map((u) => [u.code, u.id]))
@@ -42,9 +44,9 @@ export default function ImportPage() {
       created++
     }
     setStatus(`Imported ${created} material(s).${skipped.length ? ` Skipped: ${skipped.join(', ')}` : ''}`)
-  }
+  })
 
-  const importExpectedQuantities = async (file: File) => {
+  const [importExpectedQuantities, importExpectedQuantitiesState] = useAsyncAction(async (file: File) => {
     const rows = parseExpectedQuantitiesCsv(await readFileText(file))
     const zones = await listZones()
     const materials = await listMaterials()
@@ -65,11 +67,14 @@ export default function ImportPage() {
     setStatus(
       `Imported ${created} expected quantit${created === 1 ? 'y' : 'ies'}.${skipped.length ? ` Skipped: ${skipped.join(', ')}` : ''}`,
     )
-  }
+  })
+
+  const error = importZonesState.error ?? importMaterialsState.error ?? importExpectedQuantitiesState.error
 
   return (
     <div className="screen">
       <h1>Import from CSV</h1>
+      {error && <ErrorBanner message={error.message} />}
       <div className="form-row">
         <label htmlFor="import-zones">Zones CSV (name,sapStorageLocation)</label>
         <input

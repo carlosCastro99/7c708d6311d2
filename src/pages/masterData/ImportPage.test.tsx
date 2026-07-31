@@ -1,6 +1,7 @@
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { db } from '../../db/schema'
+import * as zoneRepository from '../../db/repositories/zoneRepository'
 import { createZone, listZones } from '../../db/repositories/zoneRepository'
 import { createUnit } from '../../db/repositories/unitRepository'
 import { createMaterial } from '../../db/repositories/materialRepository'
@@ -53,5 +54,18 @@ describe('ImportPage', () => {
 
     expect(await screen.findByText(/imported 1 expected quantit/i)).toBeInTheDocument()
     expect(await getExpectedQuantity(zone.id, material.id)).toBe(150)
+  })
+
+  it('shows an error banner if a zones import fails partway through', async () => {
+    const spy = vi.spyOn(zoneRepository, 'createZone').mockRejectedValueOnce(new Error('Dexie write failed'))
+    render(<ImportPage />)
+
+    const csv = 'name,sapStorageLocation\nWarehouse A,SL01'
+    const file = new File([csv], 'zones.csv', { type: 'text/csv' })
+    const input = screen.getByLabelText(/zones csv/i) as HTMLInputElement
+    fireEvent.change(input, { target: { files: [file] } })
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/dexie write failed/i)
+    spy.mockRestore()
   })
 })
