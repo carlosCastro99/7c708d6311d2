@@ -44,6 +44,7 @@ export interface DetailRow {
   status: string
   countedByUser: string
   timestamp: string
+  lotNumber?: string
 }
 
 export function buildDetailCsv(rows: DetailRow[]): string {
@@ -62,6 +63,7 @@ export function buildDetailCsv(rows: DetailRow[]): string {
       status: r.status,
       countedByUser: r.countedByUser,
       timestamp: r.timestamp,
+      lotNumber: r.lotNumber ?? '',
     })),
     { newline: '\n' },
   )

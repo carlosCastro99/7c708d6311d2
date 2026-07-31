@@ -38,7 +38,10 @@ export default function ZoneSummaryPage({ zoneCountId, userId, onClosed }: ZoneS
       {error && <ErrorBanner message={error.message} />}
       <ul>
         {lines.map((l) => (
-          <li key={l.id} className="list-item">{l.materialName}: {l.quantity}</li>
+          <li key={l.id} className="list-item">
+            <span>{l.materialName}{l.lotNumber ? ` (Lot ${l.lotNumber})` : ''}</span>
+            <span>{l.quantity}</span>
+          </li>
         ))}
       </ul>
       <button type="button" disabled={pending} onClick={() => close()}>

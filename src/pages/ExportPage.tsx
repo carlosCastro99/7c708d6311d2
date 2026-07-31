@@ -86,6 +86,7 @@ export default function ExportPage({ inventoryId }: ExportPageProps) {
               countedQuantity: line.quantity,
               variance,
               status,
+              lotNumber: line.lotNumber,
               countedByUser: updatedBy?.name ?? line.updatedByUserId,
               timestamp: new Date(line.updatedAt).toISOString(),
             })

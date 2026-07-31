@@ -20,10 +20,11 @@ export default function CountingScreen({
 }: CountingScreenProps) {
   const [quantity, setQuantity] = useState(initialQuantity)
   const [photoBlob, setPhotoBlob] = useState<Blob | null>(null)
+  const [lotNumber, setLotNumber] = useState('')
 
   const [save, { pending, error }] = useAsyncAction(async () => {
     const photoBlobId = photoBlob ? await savePhoto(photoBlob) : undefined
-    await setCountLine(zoneCountId, materialId, quantity, userId, expectedQuantity, photoBlobId)
+    await setCountLine(zoneCountId, materialId, quantity, userId, expectedQuantity, photoBlobId, lotNumber.trim() || undefined)
     onSaved()
   })
 
@@ -40,6 +41,14 @@ export default function CountingScreen({
         </p>
       )}
       <TapCounter value={quantity} onChange={setQuantity} />
+      <div className="form-row">
+        <label htmlFor="counting-lot-number">Lot / batch number (optional)</label>
+        <input
+          id="counting-lot-number"
+          value={lotNumber}
+          onChange={(e) => setLotNumber(e.target.value)}
+        />
+      </div>
       <PhotoCapture onCapture={setPhotoBlob} />
       <button type="button" disabled={pending} onClick={() => save()}>
         Save count

@@ -37,7 +37,7 @@ describe('csv export building', () => {
     ])
     const lines = csv.trim().split('\n')
     expect(lines[0]).toBe(
-      'inventoryName,passNumber,zoneName,sapStorageLocation,materialName,sapMaterialNumber,unitCode,expectedQuantity,countedQuantity,variance,status,countedByUser,timestamp',
+      'inventoryName,passNumber,zoneName,sapStorageLocation,materialName,sapMaterialNumber,unitCode,expectedQuantity,countedQuantity,variance,status,countedByUser,timestamp,lotNumber',
     )
     expect(lines[1]).toContain('Q3 Paper Warehouse')
     expect(lines[1]).toContain('Kraft Paper')

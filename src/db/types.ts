@@ -71,6 +71,7 @@ export interface MaterialCountLine {
   quantity: number
   expectedQuantity?: number
   photoBlobId?: ID
+  lotNumber?: string
   updatedByUserId: ID
   updatedAt: number
 }

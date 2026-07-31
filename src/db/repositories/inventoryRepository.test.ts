@@ -48,6 +48,20 @@ describe('inventoryRepository', () => {
     expect(reopenLogs[0].reason).toBe('miscount noticed')
   })
 
+  it('stores an optional lot/batch number on a count line', async () => {
+    const { pass } = await startInventory('Q3 Paper Warehouse', 'user-1')
+    const zoneCount = await getOrOpenZoneCount(pass.id, 'zone-1', 'user-1')
+
+    const line = await setCountLine(zoneCount.id, 'material-1', 5, 'user-1', undefined, undefined, 'LOT-2024-88')
+    expect(line.lotNumber).toBe('LOT-2024-88')
+
+    const stored = await db.countLines.get(line.id)
+    expect(stored?.lotNumber).toBe('LOT-2024-88')
+
+    const updated = await setCountLine(zoneCount.id, 'material-1', 6, 'user-1', undefined, undefined, 'LOT-2024-99')
+    expect(updated.lotNumber).toBe('LOT-2024-99')
+  })
+
   it('refuses to close a pass with open zone counts', async () => {
     const { pass } = await startInventory('Q3 Paper Warehouse', 'user-1')
     await getOrOpenZoneCount(pass.id, 'zone-1', 'user-1')

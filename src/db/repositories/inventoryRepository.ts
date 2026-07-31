@@ -52,6 +52,7 @@ export async function setCountLine(
   userId: string,
   expectedQuantity?: number,
   photoBlobId?: string,
+  lotNumber?: string,
 ): Promise<MaterialCountLine> {
   return db.transaction('rw', db.zoneCounts, db.countLines, db.auditEntries, db.passes, async () => {
     const zoneCount = await db.zoneCounts.get(zoneCountId)
@@ -80,6 +81,7 @@ export async function setCountLine(
         updatedAt: now,
         photoBlobId: photoBlobId ?? existing.photoBlobId,
         expectedQuantity: expectedQuantity ?? existing.expectedQuantity,
+        lotNumber: lotNumber ?? existing.lotNumber,
       }
       await db.countLines.put(updated)
       return updated
@@ -92,6 +94,7 @@ export async function setCountLine(
       quantity,
       expectedQuantity,
       photoBlobId,
+      lotNumber,
       updatedByUserId: userId,
       updatedAt: now,
     }
