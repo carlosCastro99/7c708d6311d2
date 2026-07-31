@@ -61,6 +61,11 @@ export default function AppShell({ children }: AppShellProps) {
                 </li>
               ))}
             </ul>
+            <div className="drawer-footer">
+              by CCASTRO
+              <br />
+              v{__APP_VERSION__}
+            </div>
           </nav>
         </div>
       )}

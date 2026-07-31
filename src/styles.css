@@ -112,10 +112,21 @@ body {
   width: 260px;
   max-width: 80vw;
   height: 100%;
+  display: flex;
+  flex-direction: column;
   background: var(--md-surface);
   box-shadow: var(--md-elevation-2);
   padding: var(--md-space-3);
   overflow-y: auto;
+}
+
+.drawer-footer {
+  margin-top: auto;
+  padding: var(--md-space-3) var(--md-space-1) var(--md-space-1);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--md-on-surface-variant);
+  text-align: center;
 }
 
 .drawer-header {
