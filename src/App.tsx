@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Link, useNavigate, useParams } from 'react-router-dom'
+import { HashRouter, Routes, Route, Link, useNavigate, useParams } from 'react-router-dom'
 import { CountingSessionProvider, useCountingSession } from './context/CountingSession'
 import HomePage from './pages/HomePage'
 import UsersPage from './pages/masterData/UsersPage'
@@ -48,7 +48,7 @@ function ExportRoute() {
 function App() {
   return (
     <CountingSessionProvider>
-      <BrowserRouter>
+      <HashRouter>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/master-data" element={<MasterDataHome />} />
@@ -64,7 +64,7 @@ function App() {
           <Route path="/backup" element={<BackupPage />} />
           <Route path="*" element={<HomePage />} />
         </Routes>
-      </BrowserRouter>
+      </HashRouter>
     </CountingSessionProvider>
   )
 }
