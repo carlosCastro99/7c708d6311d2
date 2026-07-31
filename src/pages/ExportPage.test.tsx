@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { URL as NodeURL } from 'node:url'
 import { db } from '../db/schema'
 import { createUser } from '../db/repositories/userRepository'
@@ -79,5 +79,28 @@ describe('ExportPage', () => {
     expect(detailCsv).toContain('matched')
     expect(detailCsv).toContain('mismatched')
     expect(detailCsv).toContain('manually_resolved')
+  })
+
+  it('renders an on-screen summary table with zone, material, and quantity', async () => {
+    const user = await createUser('Alex')
+    const zone = await createZone({ name: 'Warehouse A' })
+    const unit = await createUnit('KG', 'Kilogram')
+    const material = await createMaterial({ name: 'Kraft Paper', unitId: unit.id })
+    const { inventory, pass } = await startInventory('Q3 Paper Warehouse', user.id)
+    const zc = await getOrOpenZoneCount(pass.id, zone.id, user.id)
+    await setCountLine(zc.id, material.id, 98, user.id, 100)
+    await closeZoneCount(zc.id, user.id)
+    await closePass(pass.id, user.id)
+    await closeInventory(inventory.id, 'closed_single_pass')
+
+    render(<ExportPage inventoryId={inventory.id} />)
+
+    expect(await screen.findByText('Q3 Paper Warehouse')).toBeInTheDocument()
+    const table = await screen.findByRole('table')
+    expect(within(table).getByText('Warehouse A')).toBeInTheDocument()
+    expect(within(table).getByText('Kraft Paper')).toBeInTheDocument()
+    expect(within(table).getByText('98')).toBeInTheDocument()
+    expect(within(table).getByText('100')).toBeInTheDocument()
+    expect(within(table).getByText('-2')).toBeInTheDocument()
   })
 })

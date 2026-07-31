@@ -11,11 +11,16 @@ interface ExportPageProps {
 export default function ExportPage({ inventoryId }: ExportPageProps) {
   const [detailUrl, setDetailUrl] = useState<string | null>(null)
   const [summaryUrl, setSummaryUrl] = useState<string | null>(null)
+  const [inventoryName, setInventoryName] = useState<string | null>(null)
+  const [inventoryStatus, setInventoryStatus] = useState<string | null>(null)
+  const [rows, setRows] = useState<SummaryRow[]>([])
 
   useEffect(() => {
     (async () => {
       const inventory = await db.inventories.get(inventoryId)
       if (!inventory) return
+      setInventoryName(inventory.name)
+      setInventoryStatus(inventory.status)
       const passes = (await db.passes.where('inventoryId').equals(inventoryId).toArray())
         .sort((a, b) => a.passNumber - b.passNumber)
 
@@ -96,9 +101,14 @@ export default function ExportPage({ inventoryId }: ExportPageProps) {
         }
       }
 
-      const detailCsv = buildDetailCsv(detailRows)
-      const summaryCsv = buildSummaryCsv([...officialByZoneMaterial.values()])
+      const summaryRows = [...officialByZoneMaterial.values()].sort(
+        (a, b) => a.zoneName.localeCompare(b.zoneName) || a.materialName.localeCompare(b.materialName),
+      )
 
+      const detailCsv = buildDetailCsv(detailRows)
+      const summaryCsv = buildSummaryCsv(summaryRows)
+
+      setRows(summaryRows)
       setDetailUrl(URL.createObjectURL(new Blob([detailCsv], { type: 'text/csv' })))
       setSummaryUrl(URL.createObjectURL(new Blob([summaryCsv], { type: 'text/csv' })))
     })()
@@ -106,10 +116,42 @@ export default function ExportPage({ inventoryId }: ExportPageProps) {
 
   return (
     <div className="screen">
-      <h1>Export</h1>
-      {detailUrl && <a href={detailUrl} download="inventory-detail.csv">Download detail CSV</a>}
-      <br />
-      {summaryUrl && <a href={summaryUrl} download="inventory-summary.csv">Download summary CSV</a>}
+      <h1>{inventoryName ?? 'Export'}</h1>
+      {inventoryStatus && <p className="on-surface-variant">Status: {inventoryStatus}</p>}
+
+      <div className="action-row">
+        {detailUrl && <a href={detailUrl} download="inventory-detail.csv" className="link-button">Download detail CSV</a>}
+        {summaryUrl && <a href={summaryUrl} download="inventory-summary.csv" className="link-button">Download summary CSV</a>}
+      </div>
+
+      {rows.length > 0 && (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Zone</th>
+                <th>Material</th>
+                <th>Quantity</th>
+                <th>Expected</th>
+                <th>Variance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={`${row.zoneName}-${row.materialName}`}>
+                  <td>{row.zoneName}</td>
+                  <td>{row.materialName}</td>
+                  <td>{row.officialQuantity}</td>
+                  <td>{row.expectedQuantity ?? '—'}</td>
+                  <td className={row.variance ? 'variance-warning' : undefined}>
+                    {row.variance ?? '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
