@@ -12,7 +12,7 @@ interface ZoneSummaryPageProps {
 }
 
 export default function ZoneSummaryPage({ zoneCountId, userId, onClosed }: ZoneSummaryPageProps) {
-  const [lines, setLines] = useState<Array<MaterialCountLine & { materialName: string }>>([])
+  const [lines, setLines] = useState<Array<MaterialCountLine & { materialName: string; unitCode: string }>>([])
 
   useEffect(() => {
     (async () => {
@@ -20,7 +20,8 @@ export default function ZoneSummaryPage({ zoneCountId, userId, onClosed }: ZoneS
       const withNames = await Promise.all(
         rawLines.map(async (l) => {
           const material: Material | undefined = await db.materials.get(l.materialId)
-          return { ...l, materialName: material?.name ?? l.materialId }
+          const unit = material ? await db.units.get(material.unitId) : undefined
+          return { ...l, materialName: material?.name ?? l.materialId, unitCode: unit?.code ?? '' }
         }),
       )
       setLines(withNames)
@@ -40,7 +41,9 @@ export default function ZoneSummaryPage({ zoneCountId, userId, onClosed }: ZoneS
         {lines.map((l) => (
           <li key={l.id} className="list-item">
             <span>{l.materialName}{l.lotNumber ? ` (Lot ${l.lotNumber})` : ''}</span>
-            <span className={l.quantity === 0 ? 'quantity-zero' : 'quantity-counted'}>{l.quantity}</span>
+            <span className={l.quantity === 0 ? 'quantity-zero' : 'quantity-counted'}>
+              {l.quantity}{l.unitCode ? ` ${l.unitCode}` : ''}
+            </span>
           </li>
         ))}
       </ul>

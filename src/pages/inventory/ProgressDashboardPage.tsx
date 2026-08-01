@@ -12,7 +12,7 @@ export default function ProgressDashboardPage({ passId, expectedPairs = EMPTY_EX
   const [zonesClosed, setZonesClosed] = useState(0)
   const [zonesTotal, setZonesTotal] = useState(0)
   const [lineCount, setLineCount] = useState(0)
-  const [notCounted, setNotCounted] = useState<Array<{ zoneId: string; materialId: string; materialName: string }>>([])
+  const [notCounted, setNotCounted] = useState<Array<{ zoneId: string; materialId: string; zoneName: string; materialName: string }>>([])
 
   useEffect(() => {
     (async () => {
@@ -32,25 +32,34 @@ export default function ProgressDashboardPage({ passId, expectedPairs = EMPTY_EX
       const missing = []
       for (const pair of expectedPairs) {
         if (!countedPairs.has(`${pair.zoneId}::${pair.materialId}`)) {
+          const zone = await db.zones.get(pair.zoneId)
           const material = await db.materials.get(pair.materialId)
-          missing.push({ ...pair, materialName: material?.name ?? pair.materialId })
+          missing.push({ ...pair, zoneName: zone?.name ?? pair.zoneId, materialName: material?.name ?? pair.materialId })
         }
       }
       setNotCounted(missing)
     })()
   }, [passId, expectedPairs])
 
+  const percentClosed = zonesTotal > 0 ? Math.round((zonesClosed / zonesTotal) * 100) : 0
+
   return (
     <div className="screen">
       <h1>Progress</h1>
       <p>{zonesClosed} / {zonesTotal} zones closed</p>
+      <div className="progress-bar-track">
+        <div className="progress-bar-fill" style={{ width: `${percentClosed}%` }} />
+      </div>
       <p>{lineCount} material line{lineCount === 1 ? '' : 's'} counted</p>
       {notCounted.length > 0 && (
         <>
           <h2>Not counted</h2>
           <ul>
             {notCounted.map((m) => (
-              <li key={`${m.zoneId}-${m.materialId}`} className="list-item">{m.materialName} (Zone {m.zoneId})</li>
+              <li key={`${m.zoneId}-${m.materialId}`} className="list-item">
+                <span>{m.materialName}</span>
+                <span className="on-surface-variant">Zone {m.zoneName}</span>
+              </li>
             ))}
           </ul>
         </>

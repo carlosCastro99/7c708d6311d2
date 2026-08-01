@@ -118,8 +118,16 @@ export default function VarianceReportPage({ inventoryId, pass1Id, pass2Id, user
       {error && <ErrorBanner message={error.message} />}
       <ul>
         {mismatched.map((m) => (
-          <li key={`${m.zoneId}-${m.materialId}`} className="list-item">
-            Zone {m.zoneName} / Material {m.materialName}: {m.passAQuantity} vs {m.passBQuantity}
+          <li key={`${m.zoneId}-${m.materialId}`} className="list-item mismatch-row">
+            <div className="mismatch-row-main">
+              <span className="inventory-row-name">{m.materialName}</span>
+              <span className="on-surface-variant">Zone {m.zoneName}</span>
+            </div>
+            <div className="mismatch-row-values">
+              <span className="mismatch-value">Pass 1: <strong>{m.passAQuantity}</strong></span>
+              <span aria-hidden="true">→</span>
+              <span className="mismatch-value">Pass 2: <strong>{m.passBQuantity}</strong></span>
+            </div>
           </li>
         ))}
       </ul>

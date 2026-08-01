@@ -165,6 +165,12 @@ h1 {
   margin: 0 0 var(--md-space-2);
 }
 
+h2 {
+  font-size: 17px;
+  font-weight: 600;
+  margin: var(--md-space-2) 0 var(--md-space-1);
+}
+
 .screen {
   max-width: 480px;
   width: 100%;
@@ -502,4 +508,94 @@ tbody tr + tr td {
   z-index: 1;
   -webkit-mask-image: radial-gradient(ellipse 100% 100% at 100% 100%, black 0%, black 30%, transparent 75%);
   mask-image: radial-gradient(ellipse 100% 100% at 100% 100%, black 0%, black 30%, transparent 75%);
+}
+
+.inventory-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--md-space-1);
+}
+
+.inventory-row-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--md-space-2);
+}
+
+.inventory-row-name {
+  font-weight: 600;
+}
+
+.inventory-row-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--md-space-2);
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: var(--md-radius-full);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-chip-info {
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+
+.status-chip-warning {
+  background: var(--md-warning-container);
+  color: var(--md-on-warning-container);
+}
+
+.status-chip-success {
+  background: var(--md-success-container);
+  color: var(--md-on-success-container);
+}
+
+.status-chip-neutral {
+  background: #e8eaed;
+  color: var(--md-on-surface-variant);
+}
+
+.progress-bar-track {
+  background: var(--md-outline);
+  border-radius: var(--md-radius-full);
+  height: 10px;
+  overflow: hidden;
+  margin: var(--md-space-1) 0 var(--md-space-3);
+}
+
+.progress-bar-fill {
+  background: var(--md-primary);
+  height: 100%;
+  border-radius: var(--md-radius-full);
+  transition: width 0.2s ease;
+}
+
+.mismatch-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--md-space-1);
+}
+
+.mismatch-row-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--md-space-2);
+}
+
+.mismatch-row-values {
+  display: flex;
+  align-items: center;
+  gap: var(--md-space-2);
+  font-size: 14px;
+  color: var(--md-on-warning-container);
 }
