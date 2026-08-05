@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { db } from '../../db/schema'
@@ -36,6 +36,14 @@ afterEach(async () => {
   window.localStorage.clear()
 })
 
+// MaterialPickerPage shows materials as a table row + "Select" button rather
+// than a button named after the material, so selecting one means finding its
+// row first, then clicking the Select button scoped to that row.
+async function selectMaterial(user: ReturnType<typeof userEvent.setup>, materialName: string) {
+  const row = (await screen.findByText(materialName)).closest('tr')!
+  await user.click(within(row).getByRole('button', { name: /select/i }))
+}
+
 describe('CountingWizard', () => {
   it('walks zone pick -> material pick -> count -> zone summary -> close zone', async () => {
     const zone = await createZone({ name: 'Warehouse A' })
@@ -52,7 +60,7 @@ describe('CountingWizard', () => {
     renderWizard(inventory.id, pass.id)
 
     await user.click(await screen.findByRole('button', { name: 'Warehouse A' }))
-    await user.click(await screen.findByRole('button', { name: 'Kraft Paper' }))
+    await selectMaterial(user, 'Kraft Paper')
     await user.click(await screen.findByRole('button', { name: '+1' }))
     await user.click(screen.getByRole('button', { name: /save/i }))
 
@@ -86,7 +94,7 @@ describe('CountingWizard', () => {
     renderWizard(inventory.id, pass.id)
 
     await user.click(await screen.findByRole('button', { name: 'Warehouse A' }))
-    await user.click(await screen.findByRole('button', { name: 'Kraft Paper' }))
+    await selectMaterial(user, 'Kraft Paper')
     await user.click(await screen.findByRole('button', { name: '+1' }))
     await user.click(screen.getByRole('button', { name: /save/i }))
     expect(await screen.findByText(/zone summary/i)).toBeInTheDocument()
@@ -96,7 +104,7 @@ describe('CountingWizard', () => {
 
     // Pass 2: count the same zone/material with a matching quantity.
     await user.click(await screen.findByRole('button', { name: 'Warehouse A' }))
-    await user.click(await screen.findByRole('button', { name: 'Kraft Paper' }))
+    await selectMaterial(user, 'Kraft Paper')
     await user.click(await screen.findByRole('button', { name: '+1' }))
     await user.click(screen.getByRole('button', { name: /save/i }))
     expect(await screen.findByText(/zone summary/i)).toBeInTheDocument()
@@ -137,7 +145,7 @@ describe('CountingWizard', () => {
     renderWizard(inventory.id, pass2.id)
 
     await user.click(await screen.findByRole('button', { name: 'Warehouse A' }))
-    await user.click(await screen.findByRole('button', { name: 'Kraft Paper' }))
+    await selectMaterial(user, 'Kraft Paper')
     await user.click(await screen.findByRole('button', { name: '+1' }))
     await user.click(screen.getByRole('button', { name: /save/i }))
     expect(await screen.findByText(/zone summary/i)).toBeInTheDocument()

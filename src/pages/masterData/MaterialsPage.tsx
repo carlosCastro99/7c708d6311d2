@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createMaterial, listMaterials } from '../../db/repositories/materialRepository'
 import { listUnits } from '../../db/repositories/unitRepository'
 import { savePhoto } from '../../db/repositories/photoRepository'
 import type { Material, UnitOfMeasure } from '../../db/types'
 import PhotoCapture from '../../components/PhotoCapture'
 import BarcodeScanner from '../../components/BarcodeScanner'
+
+const PAGE_SIZE = 10
 
 export default function MaterialsPage() {
   const [materials, setMaterials] = useState<Material[]>([])
@@ -14,6 +16,7 @@ export default function MaterialsPage() {
   const [sapMaterialNumber, setSapMaterialNumber] = useState('')
   const [barcodeValue, setBarcodeValue] = useState('')
   const [photoBlob, setPhotoBlob] = useState<Blob | null>(null)
+  const [page, setPage] = useState(0)
 
   const refresh = () => listMaterials().then(setMaterials)
 
@@ -26,6 +29,14 @@ export default function MaterialsPage() {
   }, [])
 
   const unitCodeFor = (id: string) => units.find((u) => u.id === id)?.code ?? '?'
+
+  const sortedMaterials = useMemo(
+    () => [...materials].sort((a, b) => (a.sapMaterialNumber ?? '￿').localeCompare(b.sapMaterialNumber ?? '￿')),
+    [materials],
+  )
+  const pageCount = Math.max(1, Math.ceil(sortedMaterials.length / PAGE_SIZE))
+  const currentPage = Math.min(page, pageCount - 1)
+  const pageRows = sortedMaterials.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE)
 
   return (
     <div className="screen">
@@ -74,11 +85,36 @@ export default function MaterialsPage() {
         <PhotoCapture onCapture={setPhotoBlob} />
         <button type="submit">Add material</button>
       </form>
-      <ul>
-        {materials.map((m) => (
-          <li key={m.id} className="list-item">{m.name} ({unitCodeFor(m.unitId)})</li>
-        ))}
-      </ul>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>SAP ID</th>
+              <th>Material</th>
+              <th>Unit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pageRows.map((m) => (
+              <tr key={m.id}>
+                <td>{m.sapMaterialNumber ?? '—'}</td>
+                <td>{m.name}</td>
+                <td>{unitCodeFor(m.unitId)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="pagination-row">
+        <button type="button" className="secondary" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>
+          Previous
+        </button>
+        <span>Page {currentPage + 1} of {pageCount}</span>
+        <button type="button" className="secondary" disabled={currentPage >= pageCount - 1} onClick={() => setPage(currentPage + 1)}>
+          Next
+        </button>
+      </div>
     </div>
   )
 }

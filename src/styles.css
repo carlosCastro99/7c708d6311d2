@@ -599,3 +599,13 @@ tbody tr + tr td {
   font-size: 14px;
   color: var(--md-on-warning-container);
 }
+
+.pagination-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--md-space-2);
+  margin-top: var(--md-space-2);
+  font-size: 14px;
+  color: var(--md-on-surface-variant);
+}
