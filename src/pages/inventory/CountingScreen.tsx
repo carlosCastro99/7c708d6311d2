@@ -5,6 +5,7 @@ import { useAsyncAction } from '../../hooks/useAsyncAction'
 import ErrorBanner from '../../components/ErrorBanner'
 import TapCounter from '../../components/TapCounter'
 import PhotoCapture from '../../components/PhotoCapture'
+import RollDetector from '../../components/RollDetector'
 
 interface CountingScreenProps {
   zoneCountId: string
@@ -23,6 +24,7 @@ export default function CountingScreen({
   const [photoBlob, setPhotoBlob] = useState<Blob | null>(null)
   const [lotNumber, setLotNumber] = useState('')
   const [showBackChoice, setShowBackChoice] = useState(false)
+  const [showRollDetector, setShowRollDetector] = useState(false)
 
   const persistCount = async () => {
     const photoBlobId = photoBlob ? await savePhoto(photoBlob) : undefined
@@ -65,6 +67,22 @@ export default function CountingScreen({
         </p>
       )}
       <TapCounter value={quantity} onChange={setQuantity} />
+
+      {!showRollDetector && (
+        <button type="button" className="secondary" onClick={() => setShowRollDetector(true)}>
+          📷 Count using camera
+        </button>
+      )}
+      {showRollDetector && (
+        <RollDetector
+          onAccept={(count) => {
+            setQuantity(count)
+            setShowRollDetector(false)
+          }}
+          onCancel={() => setShowRollDetector(false)}
+        />
+      )}
+
       <div className="form-row">
         <label htmlFor="counting-lot-number">Lot / batch number (optional)</label>
         <input

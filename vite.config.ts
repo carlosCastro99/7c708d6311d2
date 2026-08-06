@@ -18,7 +18,11 @@ export default defineConfig({
       manifest: false,
       includeAssets: ['icons/icon-192.png', 'icons/icon-512.png'],
       workbox: {
-        globPatterns: ['**/*.{js,css,html,png,svg,jpg,jpeg}'],
+        // wasm included so the roll-detection engine (dynamically imported,
+        // not referenced from the app's initial load) still gets downloaded
+        // during the one-time online install, per the offline-only requirement.
+        globPatterns: ['**/*.{js,css,html,png,svg,jpg,jpeg,wasm}'],
+        maximumFileSizeToCacheInBytes: 20 * 1024 * 1024,
       },
     }),
   ],

@@ -262,6 +262,19 @@ input:focus, select:focus {
   font-size: 14px;
 }
 
+.roll-detector {
+  margin: var(--md-space-3) 0;
+  padding: var(--md-space-3);
+  background: var(--md-surface);
+  border-radius: var(--md-radius-md);
+  box-shadow: var(--md-elevation-1);
+}
+
+.roll-detector canvas {
+  border-radius: var(--md-radius-sm);
+  cursor: crosshair;
+}
+
 .action-row {
   display: flex;
   flex-wrap: wrap;

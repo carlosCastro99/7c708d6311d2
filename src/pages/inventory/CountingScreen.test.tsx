@@ -150,4 +150,28 @@ describe('CountingScreen', () => {
     const line = await db.countLines.where({ zoneCountId: 'zc-5', materialId: 'material-1' }).first()
     expect(line?.quantity).toBe(1)
   })
+
+  it('offers a "Count using camera" option that opens and can be cancelled without affecting the tap counter', async () => {
+    await db.zoneCounts.add({
+      id: 'zc-6', passId: 'pass-1', zoneId: 'zone-1', status: 'open', openedByUserId: 'user-1', openedAt: Date.now(),
+    })
+    const user = userEvent.setup()
+    render(
+      <CountingScreen
+        zoneCountId="zc-6"
+        materialId="material-1"
+        userId="user-1"
+        initialQuantity={3}
+        onSaved={vi.fn()}
+        onBack={vi.fn()}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: /count using camera/i }))
+    expect(screen.getByLabelText(/take a photo of the position/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /^cancel$/i }))
+    expect(screen.queryByLabelText(/take a photo of the position/i)).not.toBeInTheDocument()
+    expect(screen.getByText('3')).toBeInTheDocument()
+  })
 })
