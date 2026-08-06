@@ -231,6 +231,19 @@ button.danger {
   color: white;
 }
 
+.danger-zone {
+  margin-top: var(--md-space-4);
+  padding: var(--md-space-3);
+  border: 1px solid var(--md-error);
+  border-radius: var(--md-radius-md);
+}
+
+.danger-zone h2 {
+  margin-top: 0;
+  color: var(--md-error);
+  font-size: 1rem;
+}
+
 input, select {
   background: var(--md-surface);
   color: var(--md-on-surface);

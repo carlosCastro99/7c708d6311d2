@@ -75,7 +75,7 @@ describe('MaterialsPage', () => {
     await waitFor(() => expect(screen.queryByText('Kraft Paper')).not.toBeInTheDocument())
   })
 
-  it('shows an error and keeps the material when deleting one already used in a count', async () => {
+  it('shows which inventory is blocking deletion when a material is already used in a count', async () => {
     const unit = await createUnit('KG', 'Kilogram')
     const material = await createMaterial({ name: 'Kraft Paper', unitId: unit.id })
     const { pass } = await startInventory('Inv', 'user-1')
@@ -88,7 +88,26 @@ describe('MaterialsPage', () => {
     await user.click(screen.getByRole('button', { name: /delete/i }))
     await user.click(await screen.findByRole('button', { name: /confirm delete/i }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/in use|already been used/i)
-    expect(screen.getByText('Kraft Paper')).toBeInTheDocument()
+    expect(await screen.findByText('Inv')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /delete everything/i })).toBeInTheDocument()
+    expect(screen.getByText(/Kraft Paper.*is used/)).toBeInTheDocument()
+  })
+
+  it('deletes the blocking inventory and the material when choosing "Delete everything"', async () => {
+    const unit = await createUnit('KG', 'Kilogram')
+    const material = await createMaterial({ name: 'Kraft Paper', unitId: unit.id })
+    const { inventory, pass } = await startInventory('Inv', 'user-1')
+    const zc = await getOrOpenZoneCount(pass.id, 'zone-1', 'user-1')
+    await setCountLine(zc.id, material.id, 5, 'user-1')
+    const user = userEvent.setup()
+    render(<MaterialsPage />)
+
+    await screen.findByText('Kraft Paper')
+    await user.click(screen.getByRole('button', { name: /delete/i }))
+    await user.click(await screen.findByRole('button', { name: /confirm delete/i }))
+    await user.click(await screen.findByRole('button', { name: /delete everything/i }))
+
+    await waitFor(() => expect(screen.queryByText('Kraft Paper')).not.toBeInTheDocument())
+    expect(await db.inventories.get(inventory.id)).toBeUndefined()
   })
 })

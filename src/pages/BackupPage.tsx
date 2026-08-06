@@ -6,6 +6,8 @@ import ErrorBanner from '../components/ErrorBanner'
 export default function BackupPage() {
   const [exportUrl, setExportUrl] = useState<string | null>(null)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [confirmingClear, setConfirmingClear] = useState(false)
+  const [cleared, setCleared] = useState(false)
 
   const [runExport, exportState] = useAsyncAction(async () => {
     const blob = await exportBackup()
@@ -28,7 +30,14 @@ export default function BackupPage() {
     setPendingFile(null)
   })
 
-  const error = exportState.error ?? importState.error
+  const [runClear, clearState] = useAsyncAction(async () => {
+    await clearAllData()
+    setConfirmingClear(false)
+    setCleared(true)
+    setExportUrl(null)
+  })
+
+  const error = exportState.error ?? importState.error ?? clearState.error
 
   return (
     <div className="screen">
@@ -69,6 +78,28 @@ export default function BackupPage() {
           </button>
         </div>
       )}
+
+      <div className="danger-zone">
+        <h2>Danger zone</h2>
+        {cleared && <p>All data has been cleared from this device.</p>}
+        {confirmingClear ? (
+          <div className="form-row">
+            <p>This permanently deletes every inventory, count, and master-data record on this device. This cannot be undone.</p>
+            <div className="action-row">
+              <button type="button" className="danger" disabled={clearState.pending} onClick={() => runClear()}>
+                Confirm — clear all data
+              </button>
+              <button type="button" className="secondary" onClick={() => setConfirmingClear(false)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button type="button" className="danger" onClick={() => { setConfirmingClear(true); setCleared(false) }}>
+            Clear all data
+          </button>
+        )}
+      </div>
     </div>
   )
 }

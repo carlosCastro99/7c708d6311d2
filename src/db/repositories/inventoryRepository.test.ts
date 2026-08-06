@@ -4,7 +4,7 @@ import { comparePasses, resolveThirdPass } from '../../domain/reconciliation'
 import {
   startInventory, getOrOpenZoneCount, setCountLine, closeZoneCount,
   closePass, closeInventory, reopenTarget, getPassLines, startNextPass,
-  closeInventoryAfterReconciliation,
+  closeInventoryAfterReconciliation, deleteInventory,
 } from './inventoryRepository'
 
 afterEach(async () => {
@@ -221,5 +221,34 @@ describe('full pass1 -> pass2 -> mismatch -> pass3 -> resolve lifecycle', () => 
 
     const finalZone3Line = await db.countLines.where({ zoneCountId: zc3.id, materialId: 'material-3' }).first()
     expect(finalZone3Line?.quantity).toBe(35)
+  })
+})
+
+describe('deleteInventory', () => {
+  it('hard-deletes an inventory and every record that points at it', async () => {
+    const { inventory, pass } = await startInventory('Inv', 'user-1')
+    const zc = await getOrOpenZoneCount(pass.id, 'zone-1', 'user-1')
+    const line = await setCountLine(zc.id, 'material-1', 5, 'user-1')
+    await reopenTarget('zoneCount', zc.id, 'user-1', 'fixing a typo')
+
+    await deleteInventory(inventory.id)
+
+    expect(await db.inventories.get(inventory.id)).toBeUndefined()
+    expect(await db.passes.get(pass.id)).toBeUndefined()
+    expect(await db.zoneCounts.get(zc.id)).toBeUndefined()
+    expect(await db.countLines.get(line.id)).toBeUndefined()
+    expect(await db.auditEntries.where('materialCountLineId').equals(line.id).count()).toBe(0)
+    expect(await db.reopenLogs.where('targetId').equals(zc.id).count()).toBe(0)
+  })
+
+  it('does not touch other inventories', async () => {
+    const { inventory: inventoryA } = await startInventory('Inv A', 'user-1')
+    const { inventory: inventoryB, pass: passB } = await startInventory('Inv B', 'user-1')
+
+    await deleteInventory(inventoryA.id)
+
+    expect(await db.inventories.get(inventoryA.id)).toBeUndefined()
+    expect(await db.inventories.get(inventoryB.id)).toBeDefined()
+    expect(await db.passes.get(passB.id)).toBeDefined()
   })
 })

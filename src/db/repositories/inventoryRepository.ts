@@ -186,6 +186,34 @@ export async function getPassLines(
   return result
 }
 
+export async function deleteInventory(inventoryId: string): Promise<void> {
+  return db.transaction(
+    'rw', [db.inventories, db.passes, db.zoneCounts, db.countLines, db.auditEntries, db.reopenLogs],
+    async () => {
+      const passes = await db.passes.where('inventoryId').equals(inventoryId).toArray()
+      const passIds = passes.map((p) => p.id)
+
+      const zoneCounts = passIds.length > 0 ? await db.zoneCounts.where('passId').anyOf(passIds).toArray() : []
+      const zoneCountIds = zoneCounts.map((zc) => zc.id)
+
+      const countLines = zoneCountIds.length > 0
+        ? await db.countLines.where('zoneCountId').anyOf(zoneCountIds).toArray()
+        : []
+      const countLineIds = countLines.map((l) => l.id)
+
+      if (countLineIds.length > 0) await db.auditEntries.where('materialCountLineId').anyOf(countLineIds).delete()
+      if (zoneCountIds.length > 0) await db.countLines.where('zoneCountId').anyOf(zoneCountIds).delete()
+      if (zoneCountIds.length > 0) await db.zoneCounts.where('passId').anyOf(passIds).delete()
+      await db.passes.where('inventoryId').equals(inventoryId).delete()
+
+      const reopenTargetIds = [inventoryId, ...passIds, ...zoneCountIds]
+      await db.reopenLogs.where('targetId').anyOf(reopenTargetIds).delete()
+
+      await db.inventories.delete(inventoryId)
+    },
+  )
+}
+
 export async function closeInventoryAfterReconciliation(
   inventoryId: string,
   pass1Id: string,

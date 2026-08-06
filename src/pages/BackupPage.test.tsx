@@ -48,4 +48,19 @@ describe('BackupPage', () => {
       expect(users.map((u) => u.name)).toEqual(['New User'])
     })
   })
+
+  it('clears all data after confirming in the danger zone', async () => {
+    await createUser('Alex')
+    render(<BackupPage />)
+    await screen.findByRole('link', { name: /export backup/i })
+
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: /^clear all data$/i }))
+    await user.click(screen.getByRole('button', { name: /confirm — clear all data/i }))
+
+    await waitFor(async () => {
+      expect(await db.users.count()).toBe(0)
+    })
+    expect(await screen.findByText(/all data has been cleared/i)).toBeInTheDocument()
+  })
 })

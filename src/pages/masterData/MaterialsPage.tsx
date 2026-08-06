@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { createMaterial, listMaterials, updateMaterial, deleteMaterial } from '../../db/repositories/materialRepository'
+import {
+  createMaterial, listMaterials, updateMaterial, deleteMaterial, getMaterialUsage, deleteMaterialCascade,
+  type MaterialUsage,
+} from '../../db/repositories/materialRepository'
 import { listUnits } from '../../db/repositories/unitRepository'
 import { savePhoto } from '../../db/repositories/photoRepository'
 import { formatSapId, isValidSapId, SAP_ID_PLACEHOLDER } from '../../domain/sapId'
@@ -27,6 +30,7 @@ export default function MaterialsPage() {
   const [editSapError, setEditSapError] = useState<string | null>(null)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const [rowError, setRowError] = useState<string | null>(null)
+  const [usageInfo, setUsageInfo] = useState<{ id: string; name: string; usage: MaterialUsage } | null>(null)
 
   const refresh = () => listMaterials().then(setMaterials)
 
@@ -61,15 +65,22 @@ export default function MaterialsPage() {
     await refresh()
   }
 
-  const confirmDelete = async (id: string) => {
+  const confirmDelete = async (id: string, name: string) => {
     try {
       await deleteMaterial(id)
       setPendingDeleteId(null)
       await refresh()
-    } catch (err) {
-      setRowError(err instanceof Error ? err.message : String(err))
+    } catch {
+      const usage = await getMaterialUsage(id)
       setPendingDeleteId(null)
+      setUsageInfo({ id, name, usage })
     }
+  }
+
+  const confirmDeleteCascade = async (id: string) => {
+    await deleteMaterialCascade(id)
+    setUsageInfo(null)
+    await refresh()
   }
 
   const sortedMaterials = useMemo(
@@ -182,8 +193,34 @@ export default function MaterialsPage() {
                       <div className="edit-row-form">
                         <p>Delete {m.name}? This cannot be undone.</p>
                         <div className="action-row">
-                          <button type="button" className="danger" onClick={() => confirmDelete(m.id)}>Confirm delete</button>
+                          <button type="button" className="danger" onClick={() => confirmDelete(m.id, m.name)}>Confirm delete</button>
                           <button type="button" className="secondary" onClick={() => setPendingDeleteId(null)}>Cancel</button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              }
+              if (usageInfo?.id === m.id) {
+                return (
+                  <tr key={m.id}>
+                    <td colSpan={4}>
+                      <div className="edit-row-form">
+                        <p>
+                          "{usageInfo.name}" is used in {usageInfo.usage.inventories.length} inventor{usageInfo.usage.inventories.length === 1 ? 'y' : 'ies'}
+                          {usageInfo.usage.expectedQuantityCount > 0 ? ` and ${usageInfo.usage.expectedQuantityCount} expected-quantity entr${usageInfo.usage.expectedQuantityCount === 1 ? 'y' : 'ies'}` : ''}:
+                        </p>
+                        {usageInfo.usage.inventories.length > 0 && (
+                          <ul>
+                            {usageInfo.usage.inventories.map((inv) => (
+                              <li key={inv.id}>{inv.name}</li>
+                            ))}
+                          </ul>
+                        )}
+                        <p>Deleting everything will permanently remove these inventories (and everything counted in them) along with the material.</p>
+                        <div className="action-row">
+                          <button type="button" className="danger" onClick={() => confirmDeleteCascade(m.id)}>Delete everything</button>
+                          <button type="button" className="secondary" onClick={() => setUsageInfo(null)}>Cancel</button>
                         </div>
                       </div>
                     </td>

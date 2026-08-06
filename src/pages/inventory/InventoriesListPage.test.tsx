@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, within, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { db } from '../../db/schema'
 import { CountingSessionProvider } from '../../context/CountingSession'
@@ -90,5 +91,25 @@ describe('InventoriesListPage', () => {
 
     expect(await screen.findByText('Closed Inventory')).toBeInTheDocument()
     expect(screen.queryByText('Open Inventory')).not.toBeInTheDocument()
+  })
+
+  it('permanently deletes an inventory after confirming', async () => {
+    const { inventory } = await startInventory('Open Inventory', 'user-1')
+
+    render(
+      <CountingSessionProvider>
+        <MemoryRouter>
+          <InventoriesListPage />
+        </MemoryRouter>
+      </CountingSessionProvider>,
+    )
+
+    await screen.findByText('Open Inventory')
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: /delete/i }))
+    await user.click(await screen.findByRole('button', { name: /confirm delete/i }))
+
+    await waitFor(() => expect(screen.queryByText('Open Inventory')).not.toBeInTheDocument())
+    expect(await db.inventories.get(inventory.id)).toBeUndefined()
   })
 })
