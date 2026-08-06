@@ -624,3 +624,14 @@ tbody tr + tr td {
 .zone-picker-button .status-chip {
   background: var(--md-surface);
 }
+
+.edit-row-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-space-1);
+  width: 100%;
+}
+
+.edit-row-form p {
+  margin: 0;
+}

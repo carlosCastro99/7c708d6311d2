@@ -1,5 +1,7 @@
+import { useEffect } from 'react'
 import { HashRouter, Routes, Route, Link, useNavigate, useParams } from 'react-router-dom'
 import { CountingSessionProvider, useCountingSession } from './context/CountingSession'
+import { seedDefaultUnitsIfEmpty } from './db/repositories/unitRepository'
 import AppShell from './components/AppShell'
 import HomePage from './pages/HomePage'
 import UsersPage from './pages/masterData/UsersPage'
@@ -47,6 +49,10 @@ function ExportRoute() {
 }
 
 function App() {
+  useEffect(() => {
+    seedDefaultUnitsIfEmpty()
+  }, [])
+
   return (
     <CountingSessionProvider>
       <HashRouter>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { createMaterial, listMaterials } from '../../db/repositories/materialRepository'
+import { createMaterial, listMaterials, updateMaterial, deleteMaterial } from '../../db/repositories/materialRepository'
 import { listUnits } from '../../db/repositories/unitRepository'
 import { savePhoto } from '../../db/repositories/photoRepository'
 import { formatSapId, isValidSapId, SAP_ID_PLACEHOLDER } from '../../domain/sapId'
@@ -20,6 +20,13 @@ export default function MaterialsPage() {
   const [photoBlob, setPhotoBlob] = useState<Blob | null>(null)
   const [page, setPage] = useState(0)
   const [sapIdError, setSapIdError] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editUnitId, setEditUnitId] = useState('')
+  const [editSapNumber, setEditSapNumber] = useState('')
+  const [editSapError, setEditSapError] = useState<string | null>(null)
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+  const [rowError, setRowError] = useState<string | null>(null)
 
   const refresh = () => listMaterials().then(setMaterials)
 
@@ -32,6 +39,38 @@ export default function MaterialsPage() {
   }, [])
 
   const unitCodeFor = (id: string) => units.find((u) => u.id === id)?.code ?? '?'
+
+  const startEdit = (material: Material) => {
+    setEditingId(material.id)
+    setEditName(material.name)
+    setEditUnitId(material.unitId)
+    setEditSapNumber(material.sapMaterialNumber ?? '')
+    setEditSapError(null)
+    setRowError(null)
+  }
+
+  const saveEdit = async () => {
+    if (!editName.trim() || !editUnitId) return
+    const trimmedSapId = editSapNumber.trim()
+    if (trimmedSapId && !isValidSapId(trimmedSapId)) {
+      setEditSapError(`SAP material number must be in the format ${SAP_ID_PLACEHOLDER}`)
+      return
+    }
+    await updateMaterial(editingId!, { name: editName.trim(), unitId: editUnitId, sapMaterialNumber: trimmedSapId || undefined })
+    setEditingId(null)
+    await refresh()
+  }
+
+  const confirmDelete = async (id: string) => {
+    try {
+      await deleteMaterial(id)
+      setPendingDeleteId(null)
+      await refresh()
+    } catch (err) {
+      setRowError(err instanceof Error ? err.message : String(err))
+      setPendingDeleteId(null)
+    }
+  }
 
   const sortedMaterials = useMemo(
     () => [...materials].sort((a, b) => (a.sapMaterialNumber ?? '￿').localeCompare(b.sapMaterialNumber ?? '￿')),
@@ -96,6 +135,7 @@ export default function MaterialsPage() {
         <PhotoCapture onCapture={setPhotoBlob} />
         <button type="submit">Add material</button>
       </form>
+      {rowError && <ErrorBanner message={rowError} />}
       <div className="table-wrap">
         <table>
           <thead>
@@ -103,16 +143,67 @@ export default function MaterialsPage() {
               <th>SAP ID</th>
               <th>Material</th>
               <th>Unit</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
-            {pageRows.map((m) => (
-              <tr key={m.id}>
-                <td>{m.sapMaterialNumber ?? '—'}</td>
-                <td>{m.name}</td>
-                <td>{unitCodeFor(m.unitId)}</td>
-              </tr>
-            ))}
+            {pageRows.map((m) => {
+              if (editingId === m.id) {
+                return (
+                  <tr key={m.id}>
+                    <td colSpan={4}>
+                      <div className="edit-row-form">
+                        {editSapError && <ErrorBanner message={editSapError} />}
+                        <input
+                          aria-label={`Edit SAP id for ${m.name}`}
+                          value={editSapNumber}
+                          placeholder={SAP_ID_PLACEHOLDER}
+                          onChange={(e) => setEditSapNumber(formatSapId(e.target.value))}
+                        />
+                        <input aria-label={`Edit name for ${m.name}`} value={editName} onChange={(e) => setEditName(e.target.value)} />
+                        <select aria-label={`Edit unit for ${m.name}`} value={editUnitId} onChange={(e) => setEditUnitId(e.target.value)}>
+                          {units.map((u) => (
+                            <option key={u.id} value={u.id}>{u.code}</option>
+                          ))}
+                        </select>
+                        <div className="action-row">
+                          <button type="button" onClick={saveEdit}>Save</button>
+                          <button type="button" className="secondary" onClick={() => setEditingId(null)}>Cancel</button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              }
+              if (pendingDeleteId === m.id) {
+                return (
+                  <tr key={m.id}>
+                    <td colSpan={4}>
+                      <div className="edit-row-form">
+                        <p>Delete {m.name}? This cannot be undone.</p>
+                        <div className="action-row">
+                          <button type="button" className="danger" onClick={() => confirmDelete(m.id)}>Confirm delete</button>
+                          <button type="button" className="secondary" onClick={() => setPendingDeleteId(null)}>Cancel</button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              }
+              return (
+                <tr key={m.id}>
+                  <td>{m.sapMaterialNumber ?? '—'}</td>
+                  <td>{m.name}</td>
+                  <td>{unitCodeFor(m.unitId)}</td>
+                  <td>
+                    <div className="action-row" style={{ margin: 0 }}>
+                      <button type="button" className="secondary" onClick={() => startEdit(m)}>Edit</button>
+                      <button type="button" className="danger" onClick={() => setPendingDeleteId(m.id)}>Delete</button>
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
