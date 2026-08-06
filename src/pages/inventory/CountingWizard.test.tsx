@@ -59,7 +59,7 @@ describe('CountingWizard', () => {
     const user = userEvent.setup()
     renderWizard(inventory.id, pass.id)
 
-    await user.click(await screen.findByRole('button', { name: 'Warehouse A' }))
+    await user.click(await screen.findByRole('button', { name: /warehouse a/i }))
     await selectMaterial(user, 'Kraft Paper')
     await user.click(await screen.findByRole('button', { name: '+1' }))
     await user.click(screen.getByRole('button', { name: /save/i }))
@@ -94,7 +94,7 @@ describe('CountingWizard', () => {
     const user = userEvent.setup()
     renderWizard(inventory.id, pass.id)
 
-    await user.click(await screen.findByRole('button', { name: 'Warehouse A' }))
+    await user.click(await screen.findByRole('button', { name: /warehouse a/i }))
 
     // Start counting Kraft Paper, then back out without saving to prove Back
     // returns to the material list rather than requiring a save or a close.
@@ -133,7 +133,7 @@ describe('CountingWizard', () => {
     const user = userEvent.setup()
     renderWizard(inventory.id, pass.id)
 
-    await user.click(await screen.findByRole('button', { name: 'Warehouse A' }))
+    await user.click(await screen.findByRole('button', { name: /warehouse a/i }))
     await selectMaterial(user, 'Kraft Paper')
     await user.click(await screen.findByRole('button', { name: '+1' }))
     await user.click(screen.getByRole('button', { name: /save/i }))
@@ -143,7 +143,7 @@ describe('CountingWizard', () => {
     await user.click(await screen.findByRole('button', { name: /start second pass/i }))
 
     // Pass 2: count the same zone/material with a matching quantity.
-    await user.click(await screen.findByRole('button', { name: 'Warehouse A' }))
+    await user.click(await screen.findByRole('button', { name: /warehouse a/i }))
     await selectMaterial(user, 'Kraft Paper')
     await user.click(await screen.findByRole('button', { name: '+1' }))
     await user.click(screen.getByRole('button', { name: /save/i }))
@@ -184,7 +184,7 @@ describe('CountingWizard', () => {
     const user = userEvent.setup()
     renderWizard(inventory.id, pass2.id)
 
-    await user.click(await screen.findByRole('button', { name: 'Warehouse A' }))
+    await user.click(await screen.findByRole('button', { name: /warehouse a/i }))
     await selectMaterial(user, 'Kraft Paper')
     await user.click(await screen.findByRole('button', { name: '+1' }))
     await user.click(screen.getByRole('button', { name: /save/i }))

@@ -19,7 +19,7 @@ describe('MaterialPickerPage', () => {
     }
 
     const onMaterialChosen = vi.fn()
-    render(<MaterialPickerPage zoneCountId="zc-1" onMaterialChosen={onMaterialChosen} />)
+    render(<MaterialPickerPage zoneCountId="zc-1" onMaterialChosen={onMaterialChosen} onBack={vi.fn()} />)
 
     await screen.findByText('Material 1')
     const table = screen.getByRole('table')
@@ -42,7 +42,7 @@ describe('MaterialPickerPage', () => {
     await createMaterial({ name: 'Kraft Paper', unitId: unit.id, sapMaterialNumber: '1000123' })
     await createMaterial({ name: 'Recycled Pulp', unitId: unit.id, sapMaterialNumber: '2000456' })
 
-    render(<MaterialPickerPage zoneCountId="zc-1" onMaterialChosen={vi.fn()} />)
+    render(<MaterialPickerPage zoneCountId="zc-1" onMaterialChosen={vi.fn()} onBack={vi.fn()} />)
     await screen.findByRole('table')
 
     const user = userEvent.setup()
@@ -57,7 +57,7 @@ describe('MaterialPickerPage', () => {
     const material = await createMaterial({ name: 'Kraft Paper', unitId: unit.id })
 
     const onMaterialChosen = vi.fn()
-    render(<MaterialPickerPage zoneCountId="zc-1" onMaterialChosen={onMaterialChosen} />)
+    render(<MaterialPickerPage zoneCountId="zc-1" onMaterialChosen={onMaterialChosen} onBack={vi.fn()} />)
     await screen.findByText('Kraft Paper')
 
     const user = userEvent.setup()
@@ -66,11 +66,21 @@ describe('MaterialPickerPage', () => {
     expect(onMaterialChosen).toHaveBeenCalledWith(material.id)
   })
 
+  it('calls onBack when "Back to zones" is clicked', async () => {
+    const onBack = vi.fn()
+    render(<MaterialPickerPage zoneCountId="zc-1" onMaterialChosen={vi.fn()} onBack={onBack} />)
+
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: /back to zones/i }))
+
+    expect(onBack).toHaveBeenCalled()
+  })
+
   it('creates a new material inline and selects it immediately', async () => {
     const unit = await createUnit('KG', 'Kilogram')
 
     const onMaterialChosen = vi.fn()
-    render(<MaterialPickerPage zoneCountId="zc-1" onMaterialChosen={onMaterialChosen} />)
+    render(<MaterialPickerPage zoneCountId="zc-1" onMaterialChosen={onMaterialChosen} onBack={vi.fn()} />)
     await screen.findByRole('table')
 
     const user = userEvent.setup()
@@ -94,7 +104,7 @@ describe('MaterialPickerPage', () => {
     const zc = await getOrOpenZoneCount(pass.id, 'zone-1', 'user-1')
     await setCountLine(zc.id, counted.id, 42, 'user-1')
 
-    render(<MaterialPickerPage zoneCountId={zc.id} onMaterialChosen={vi.fn()} />)
+    render(<MaterialPickerPage zoneCountId={zc.id} onMaterialChosen={vi.fn()} onBack={vi.fn()} />)
 
     const kraftRow = (await screen.findByText('Kraft Paper')).closest('tr')!
     expect(within(kraftRow).getByText('42')).toBeInTheDocument()
@@ -107,7 +117,7 @@ describe('MaterialPickerPage', () => {
   it('rejects a SAP number that does not match the required format when creating inline', async () => {
     const unit = await createUnit('KG', 'Kilogram')
 
-    render(<MaterialPickerPage zoneCountId="zc-1" onMaterialChosen={vi.fn()} />)
+    render(<MaterialPickerPage zoneCountId="zc-1" onMaterialChosen={vi.fn()} onBack={vi.fn()} />)
     await screen.findByRole('table')
 
     const user = userEvent.setup()
@@ -122,7 +132,7 @@ describe('MaterialPickerPage', () => {
   })
 
   it('auto-formats a typed SAP number with dashes when creating inline', async () => {
-    render(<MaterialPickerPage zoneCountId="zc-1" onMaterialChosen={vi.fn()} />)
+    render(<MaterialPickerPage zoneCountId="zc-1" onMaterialChosen={vi.fn()} onBack={vi.fn()} />)
     await screen.findByRole('table')
 
     const user = userEvent.setup()

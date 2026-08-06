@@ -609,3 +609,18 @@ tbody tr + tr td {
   font-size: 14px;
   color: var(--md-on-surface-variant);
 }
+
+.zone-picker-button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  gap: var(--md-space-2);
+}
+
+/* The "In Progress" chip otherwise shares its background color with this
+   button's own (--md-primary-container), making it invisible. Force a
+   white backing on any chip nested here regardless of variant. */
+.zone-picker-button .status-chip {
+  background: var(--md-surface);
+}

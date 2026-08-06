@@ -10,11 +10,12 @@ import ErrorBanner from '../../components/ErrorBanner'
 interface MaterialPickerPageProps {
   zoneCountId: string
   onMaterialChosen: (materialId: string) => void
+  onBack: () => void
 }
 
 const PAGE_SIZE = 10
 
-export default function MaterialPickerPage({ zoneCountId, onMaterialChosen }: MaterialPickerPageProps) {
+export default function MaterialPickerPage({ zoneCountId, onMaterialChosen, onBack }: MaterialPickerPageProps) {
   const [materials, setMaterials] = useState<Material[]>([])
   const [units, setUnits] = useState<UnitOfMeasure[]>([])
   const [currentCounts, setCurrentCounts] = useState<Record<string, number>>({})
@@ -71,6 +72,11 @@ export default function MaterialPickerPage({ zoneCountId, onMaterialChosen }: Ma
 
   return (
     <div className="screen">
+      <div className="action-row" style={{ marginBottom: 0 }}>
+        <button type="button" className="secondary" onClick={onBack}>
+          ‹ Back to zones
+        </button>
+      </div>
       <h1>Pick a Material</h1>
       <BarcodeScanner onDetected={handleDetected} />
 

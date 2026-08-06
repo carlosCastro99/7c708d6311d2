@@ -106,6 +106,7 @@ export default function CountingWizard() {
           </button>
         </div>
         <ZonePickerPage
+          passId={passId}
           onZoneChosen={async (zoneId) => {
             setSession({ ...session, zoneId })
             const zc = await getOrOpenZoneCount(passId, zoneId, userId)
@@ -129,6 +130,7 @@ export default function CountingWizard() {
           setExpectedQuantity(await getExpectedQuantity(zoneId, materialId))
           setStep('counting')
         }}
+        onBack={() => setStep('zone-picker')}
       />
     )
   }
