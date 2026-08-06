@@ -108,7 +108,8 @@ export default function CountingWizard() {
         <ZonePickerPage
           onZoneChosen={async (zoneId) => {
             setSession({ ...session, zoneId })
-            await getOrOpenZoneCount(passId, zoneId, userId)
+            const zc = await getOrOpenZoneCount(passId, zoneId, userId)
+            setZoneCountId(zc.id)
             setStep('material-picker')
           }}
         />
@@ -119,12 +120,11 @@ export default function CountingWizard() {
   if (step === 'material-picker') {
     return (
       <MaterialPickerPage
+        zoneCountId={zoneCountId!}
         onMaterialChosen={async (materialId) => {
           const zoneId = session.zoneId!
           setSession({ ...session, materialId })
-          const zc = await getOrOpenZoneCount(passId, zoneId, userId)
-          setZoneCountId(zc.id)
-          const existingLine = await db.countLines.where({ zoneCountId: zc.id, materialId }).first()
+          const existingLine = await db.countLines.where({ zoneCountId: zoneCountId!, materialId }).first()
           setInitialQuantity(existingLine?.quantity ?? 0)
           setExpectedQuantity(await getExpectedQuantity(zoneId, materialId))
           setStep('counting')
@@ -142,6 +142,7 @@ export default function CountingWizard() {
         expectedQuantity={expectedQuantity}
         initialQuantity={initialQuantity}
         onSaved={() => setStep('zone-summary')}
+        onBack={() => setStep(onThirdPass ? 'third-pass-picker' : 'material-picker')}
       />
     )
   }
@@ -152,6 +153,7 @@ export default function CountingWizard() {
         zoneCountId={zoneCountId!}
         userId={userId}
         onClosed={() => setStep(onThirdPass ? 'third-pass-picker' : 'zone-picker')}
+        onCountAnother={onThirdPass ? undefined : () => setStep('material-picker')}
       />
     )
   }

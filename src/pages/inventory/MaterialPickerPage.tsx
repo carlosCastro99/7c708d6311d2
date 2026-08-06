@@ -1,24 +1,30 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { listMaterials, findMaterialByBarcode, createMaterial } from '../../db/repositories/materialRepository'
 import { listUnits } from '../../db/repositories/unitRepository'
+import { db } from '../../db/schema'
+import { formatSapId, isValidSapId, SAP_ID_PLACEHOLDER } from '../../domain/sapId'
 import type { Material, UnitOfMeasure } from '../../db/types'
 import BarcodeScanner from '../../components/BarcodeScanner'
+import ErrorBanner from '../../components/ErrorBanner'
 
 interface MaterialPickerPageProps {
+  zoneCountId: string
   onMaterialChosen: (materialId: string) => void
 }
 
 const PAGE_SIZE = 10
 
-export default function MaterialPickerPage({ onMaterialChosen }: MaterialPickerPageProps) {
+export default function MaterialPickerPage({ zoneCountId, onMaterialChosen }: MaterialPickerPageProps) {
   const [materials, setMaterials] = useState<Material[]>([])
   const [units, setUnits] = useState<UnitOfMeasure[]>([])
+  const [currentCounts, setCurrentCounts] = useState<Record<string, number>>({})
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const [newUnitId, setNewUnitId] = useState('')
   const [newSapNumber, setNewSapNumber] = useState('')
+  const [sapIdError, setSapIdError] = useState<string | null>(null)
 
   const refresh = () => listMaterials().then(setMaterials)
 
@@ -29,6 +35,15 @@ export default function MaterialPickerPage({ onMaterialChosen }: MaterialPickerP
       if (u.length > 0) setNewUnitId(u[0].id)
     })
   }, [])
+
+  useEffect(() => {
+    (async () => {
+      const lines = await db.countLines.where('zoneCountId').equals(zoneCountId).toArray()
+      const counts: Record<string, number> = {}
+      for (const line of lines) counts[line.materialId] = line.quantity
+      setCurrentCounts(counts)
+    })()
+  }, [zoneCountId])
 
   const handleDetected = useCallback(
     async (value: string) => {
@@ -81,10 +96,16 @@ export default function MaterialPickerPage({ onMaterialChosen }: MaterialPickerP
           onSubmit={async (e) => {
             e.preventDefault()
             if (!newName.trim() || !newUnitId) return
+            const trimmedSapId = newSapNumber.trim()
+            if (trimmedSapId && !isValidSapId(trimmedSapId)) {
+              setSapIdError(`SAP number must be in the format ${SAP_ID_PLACEHOLDER}`)
+              return
+            }
+            setSapIdError(null)
             const material = await createMaterial({
               name: newName.trim(),
               unitId: newUnitId,
-              sapMaterialNumber: newSapNumber.trim() || undefined,
+              sapMaterialNumber: trimmedSapId || undefined,
             })
             setNewName('')
             setNewSapNumber('')
@@ -93,6 +114,7 @@ export default function MaterialPickerPage({ onMaterialChosen }: MaterialPickerP
             onMaterialChosen(material.id)
           }}
         >
+          {sapIdError && <ErrorBanner message={sapIdError} />}
           <div className="form-row">
             <label htmlFor="new-material-name">New material name</label>
             <input id="new-material-name" value={newName} onChange={(e) => setNewName(e.target.value)} />
@@ -106,8 +128,13 @@ export default function MaterialPickerPage({ onMaterialChosen }: MaterialPickerP
             </select>
           </div>
           <div className="form-row">
-            <label htmlFor="new-material-sap">SAP number (optional)</label>
-            <input id="new-material-sap" value={newSapNumber} onChange={(e) => setNewSapNumber(e.target.value)} />
+            <label htmlFor="new-material-sap">SAP number (optional, format {SAP_ID_PLACEHOLDER})</label>
+            <input
+              id="new-material-sap"
+              value={newSapNumber}
+              placeholder={SAP_ID_PLACEHOLDER}
+              onChange={(e) => setNewSapNumber(formatSapId(e.target.value))}
+            />
           </div>
           <div className="action-row">
             <button type="submit">Create &amp; select</button>
@@ -123,20 +150,27 @@ export default function MaterialPickerPage({ onMaterialChosen }: MaterialPickerP
               <th>SAP ID</th>
               <th>Material</th>
               <th>Unit</th>
+              <th>Current Count</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {pageRows.map((m) => (
-              <tr key={m.id}>
-                <td>{m.sapMaterialNumber ?? '—'}</td>
-                <td>{m.name}</td>
-                <td>{unitCodeFor(m.unitId)}</td>
-                <td>
-                  <button type="button" className="secondary" onClick={() => onMaterialChosen(m.id)}>Select</button>
-                </td>
-              </tr>
-            ))}
+            {pageRows.map((m) => {
+              const currentCount = currentCounts[m.id]
+              return (
+                <tr key={m.id}>
+                  <td>{m.sapMaterialNumber ?? '—'}</td>
+                  <td>{m.name}</td>
+                  <td>{unitCodeFor(m.unitId)}</td>
+                  <td className={currentCount === undefined ? 'quantity-zero' : 'quantity-counted'}>
+                    {currentCount ?? '—'}
+                  </td>
+                  <td>
+                    <button type="button" className="secondary" onClick={() => onMaterialChosen(m.id)}>Select</button>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>

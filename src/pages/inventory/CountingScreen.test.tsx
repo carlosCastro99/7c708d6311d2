@@ -22,6 +22,7 @@ describe('CountingScreen', () => {
         userId="user-1"
         initialQuantity={0}
         onSaved={onSaved}
+        onBack={vi.fn()}
       />,
     )
 
@@ -46,6 +47,7 @@ describe('CountingScreen', () => {
         expectedQuantity={100}
         initialQuantity={80}
         onSaved={() => {}}
+        onBack={vi.fn()}
       />,
     )
 
@@ -63,6 +65,7 @@ describe('CountingScreen', () => {
         userId="user-1"
         initialQuantity={0}
         onSaved={onSaved}
+        onBack={vi.fn()}
       />,
     )
 
@@ -70,5 +73,81 @@ describe('CountingScreen', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/zone count not found/i)
     expect(onSaved).not.toHaveBeenCalled()
+  })
+
+  it('goes back immediately with no prompt when nothing has changed', async () => {
+    await db.zoneCounts.add({
+      id: 'zc-3', passId: 'pass-1', zoneId: 'zone-1', status: 'open', openedByUserId: 'user-1', openedAt: Date.now(),
+    })
+    const onBack = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <CountingScreen
+        zoneCountId="zc-3"
+        materialId="material-1"
+        userId="user-1"
+        initialQuantity={5}
+        onSaved={vi.fn()}
+        onBack={onBack}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: /back/i }))
+
+    expect(onBack).toHaveBeenCalled()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('asks to save or discard before going back when the count has changed', async () => {
+    await db.zoneCounts.add({
+      id: 'zc-4', passId: 'pass-1', zoneId: 'zone-1', status: 'open', openedByUserId: 'user-1', openedAt: Date.now(),
+    })
+    const onBack = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <CountingScreen
+        zoneCountId="zc-4"
+        materialId="material-1"
+        userId="user-1"
+        initialQuantity={0}
+        onSaved={vi.fn()}
+        onBack={onBack}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: '+1' }))
+    await user.click(screen.getByRole('button', { name: /back/i }))
+
+    expect(onBack).not.toHaveBeenCalled()
+    expect(await screen.findByRole('alert')).toHaveTextContent(/unsaved count/i)
+
+    await user.click(screen.getByRole('button', { name: /discard.*go back/i }))
+    expect(onBack).toHaveBeenCalled()
+  })
+
+  it('saves the count before going back when "Save & go back" is chosen', async () => {
+    await db.zoneCounts.add({
+      id: 'zc-5', passId: 'pass-1', zoneId: 'zone-1', status: 'open', openedByUserId: 'user-1', openedAt: Date.now(),
+    })
+    const onBack = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <CountingScreen
+        zoneCountId="zc-5"
+        materialId="material-1"
+        userId="user-1"
+        initialQuantity={0}
+        onSaved={vi.fn()}
+        onBack={onBack}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: '+1' }))
+    await user.click(screen.getByRole('button', { name: /back/i }))
+    await user.click(await screen.findByRole('button', { name: /save.*go back/i }))
+
+    await waitFor(() => expect(onBack).toHaveBeenCalled())
+    const line = await db.countLines.where({ zoneCountId: 'zc-5', materialId: 'material-1' }).first()
+    expect(line?.quantity).toBe(1)
   })
 })

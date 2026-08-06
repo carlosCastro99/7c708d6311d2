@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { createMaterial, listMaterials } from '../../db/repositories/materialRepository'
 import { listUnits } from '../../db/repositories/unitRepository'
 import { savePhoto } from '../../db/repositories/photoRepository'
+import { formatSapId, isValidSapId, SAP_ID_PLACEHOLDER } from '../../domain/sapId'
 import type { Material, UnitOfMeasure } from '../../db/types'
 import PhotoCapture from '../../components/PhotoCapture'
 import BarcodeScanner from '../../components/BarcodeScanner'
+import ErrorBanner from '../../components/ErrorBanner'
 
 const PAGE_SIZE = 10
 
@@ -17,6 +19,7 @@ export default function MaterialsPage() {
   const [barcodeValue, setBarcodeValue] = useState('')
   const [photoBlob, setPhotoBlob] = useState<Blob | null>(null)
   const [page, setPage] = useState(0)
+  const [sapIdError, setSapIdError] = useState<string | null>(null)
 
   const refresh = () => listMaterials().then(setMaterials)
 
@@ -45,11 +48,17 @@ export default function MaterialsPage() {
         onSubmit={async (e) => {
           e.preventDefault()
           if (!name.trim() || !unitId) return
+          const trimmedSapId = sapMaterialNumber.trim()
+          if (trimmedSapId && !isValidSapId(trimmedSapId)) {
+            setSapIdError(`SAP material number must be in the format ${SAP_ID_PLACEHOLDER}`)
+            return
+          }
+          setSapIdError(null)
           const photoBlobId = photoBlob ? await savePhoto(photoBlob) : undefined
           await createMaterial({
             name: name.trim(),
             unitId,
-            sapMaterialNumber: sapMaterialNumber.trim() || undefined,
+            sapMaterialNumber: trimmedSapId || undefined,
             barcodeValue: barcodeValue.trim() || undefined,
             photoBlobId,
           })
@@ -60,6 +69,7 @@ export default function MaterialsPage() {
           await refresh()
         }}
       >
+        {sapIdError && <ErrorBanner message={sapIdError} />}
         <div className="form-row">
           <label htmlFor="material-name">Material name</label>
           <input id="material-name" value={name} onChange={(e) => setName(e.target.value)} />
@@ -73,11 +83,12 @@ export default function MaterialsPage() {
           </select>
         </div>
         <div className="form-row">
-          <label htmlFor="material-sap-number">SAP material number (optional)</label>
+          <label htmlFor="material-sap-number">SAP material number (optional, format {SAP_ID_PLACEHOLDER})</label>
           <input
             id="material-sap-number"
             value={sapMaterialNumber}
-            onChange={(e) => setSapMaterialNumber(e.target.value)}
+            placeholder={SAP_ID_PLACEHOLDER}
+            onChange={(e) => setSapMaterialNumber(formatSapId(e.target.value))}
           />
         </div>
         <BarcodeScanner onDetected={setBarcodeValue} />

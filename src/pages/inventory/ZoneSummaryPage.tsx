@@ -9,9 +9,10 @@ interface ZoneSummaryPageProps {
   zoneCountId: string
   userId: string
   onClosed: () => void
+  onCountAnother?: () => void
 }
 
-export default function ZoneSummaryPage({ zoneCountId, userId, onClosed }: ZoneSummaryPageProps) {
+export default function ZoneSummaryPage({ zoneCountId, userId, onClosed, onCountAnother }: ZoneSummaryPageProps) {
   const [lines, setLines] = useState<Array<MaterialCountLine & { materialName: string; unitCode: string }>>([])
 
   useEffect(() => {
@@ -47,9 +48,16 @@ export default function ZoneSummaryPage({ zoneCountId, userId, onClosed }: ZoneS
           </li>
         ))}
       </ul>
-      <button type="button" disabled={pending} onClick={() => close()}>
-        Close zone
-      </button>
+      <div className="action-row">
+        {onCountAnother && (
+          <button type="button" className="secondary" onClick={onCountAnother}>
+            + Count another material
+          </button>
+        )}
+        <button type="button" disabled={pending} onClick={() => close()}>
+          Close zone
+        </button>
+      </div>
     </div>
   )
 }

@@ -83,6 +83,46 @@ describe('CountingWizard', () => {
     expect(await screen.findByRole('button', { name: /finish with one pass/i })).toBeInTheDocument()
   })
 
+  it('lets a worker count a second material in the same zone via "count another material", and go back mid-count without closing the zone', async () => {
+    const zone = await createZone({ name: 'Warehouse A' })
+    const unit = await createUnit('KG', 'Kilogram')
+    const materialA = await createMaterial({ name: 'Kraft Paper', unitId: unit.id })
+    const materialB = await createMaterial({ name: 'Recycled Pulp', unitId: unit.id })
+    const { inventory, pass } = await startInventory('Inv', 'user-1')
+
+    seedSession('user-1', inventory.id, pass.id)
+    const user = userEvent.setup()
+    renderWizard(inventory.id, pass.id)
+
+    await user.click(await screen.findByRole('button', { name: 'Warehouse A' }))
+
+    // Start counting Kraft Paper, then back out without saving to prove Back
+    // returns to the material list rather than requiring a save or a close.
+    await selectMaterial(user, 'Kraft Paper')
+    await screen.findByRole('heading', { name: /count/i })
+    await user.click(screen.getByRole('button', { name: /back/i }))
+    expect(await screen.findByText('Kraft Paper')).toBeInTheDocument() // back at material picker
+
+    // Now actually count Kraft Paper and save it.
+    await selectMaterial(user, 'Kraft Paper')
+    await user.click(await screen.findByRole('button', { name: '+1' }))
+    await user.click(screen.getByRole('button', { name: /save/i }))
+    expect(await screen.findByText(/zone summary/i)).toBeInTheDocument()
+
+    // From the zone summary, count a second material in the same zone
+    // without closing it.
+    await user.click(screen.getByRole('button', { name: /count another material/i }))
+    await selectMaterial(user, 'Recycled Pulp')
+    await user.click(await screen.findByRole('button', { name: '+1' }))
+    await user.click(screen.getByRole('button', { name: /save/i }))
+
+    await waitFor(async () => {
+      const zc = await db.zoneCounts.where({ passId: pass.id, zoneId: zone.id }).first()
+      const lines = await db.countLines.where('zoneCountId').equals(zc!.id).toArray()
+      expect(lines.map((l) => l.materialId).sort()).toEqual([materialA.id, materialB.id].sort())
+    })
+  })
+
   it('drives a full two-pass matching inventory to success without throwing (regression: pass 2 must actually get closed)', async () => {
     const zone = await createZone({ name: 'Warehouse A' })
     const unit = await createUnit('KG', 'Kilogram')
